@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <title>Algorithm Visualizer</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<header>
+  <h1>Algorithm Visualizer</h1>
+  <small style="color:var(--muted)">Sorting · Searching · String · Greedy · Graph · Converter · Prime · Cryptography · More</small>
+</header>
+<main>
+  <div class="left">
+    <div class="card">
+      <label for="category">Choose Category</label>
+      <select id="category">
+        <option value="">-- select --</option>
+        <option value="sort">Sorting</option>
+        <option value="search">Searching</option>
+        <option value="string">String Searching</option>
+        <option value="greedy">Greedy Algorithms</option>
+        <option value="graph">Graph Algorithms</option>
+        <option value="converter">Number Converters</option>
+        <option value="prime">Prime</option>
+        <option value="crypto">Cryptography</option>
+        <option value="more">More</option>
+      </select>
+
+      <!-- SORT -->
+      <div class="section" id="sortSettings">
+        <label>Sorting Algorithm</label>
+        <select id="sortAlgo">
+          <option value="insertion">Insertion</option>
+          <option value="selection">Selection</option>
+          <option value="bubble">Bubble</option>
+          <option value="merge">Merge</option>
+          <option value="quick">Quick</option>
+          <option value="heap">Heap</option>
+          <option value="counting">Counting</option>
+          <option value="radix">Radix</option>
+          <option value="bucket">Bucket</option>
+          <option value="shell">Shell</option>
+          <option value="comb">Comb</option>
+          <option value="tim">Tim</option>
+          <option value="tree">Tree</option>
+          <option value="tournament">Tournament</option>
+        </select>
+        <label>Array (comma separated)</label>
+        <input id="sortArray" value="6,3,9,2,8,5,4,1,7,0,2,12,20,14"/>
+        <div class="controls">
+          <button id="sortStartBtn" >Start</button>
+          <button id="sortRandBtn">Randomize</button>
+          <div class="pill" id="speedPill">Speed: 250ms</div>
+        </div>
+        <div style="margin-top:8px">
+          <label for="delayInput" style="font-size:13px;color:var(--muted)">Animation Delay (ms)</label>
+          <input id="delayInput" type="range" min="20" max="1200" step="10" value="350"/>
+        </div>
+      </div>
+
+      <!-- SEARCH -->
+      <div class="section" id="searchSettings">
+        <label>Search Algorithm</label>
+        <select id="searchAlgo">
+          <option value="linear">Linear</option>
+          <option value="binary">Binary</option>
+          <option value="jump">Jump</option>
+          <option value="exponential">Exponential</option>
+          <option value="interpolation">Interpolation</option>
+          <option value="ternary">Ternary</option>
+          <option value="fibonacci">Fibonacci</option>
+        </select>
+        <label>Array (comma separated)</label>
+        <input id="searchArray" value="1,3,5,7,9,11"/>
+        <label>Target</label>
+        <input id="searchTarget" value="7"/>
+        <div class="controls">
+          <button id="searchStartBtn">Start</button>
+          <button id="searchResetBtn">Reset</button>
+        </div>
+      </div>
+
+      <!-- STRING -->
+      <div class="section" id="stringSettings">
+        <label>String Algorithm</label>
+        <select id="stringAlgo">
+          <option value="naive">Naive</option>
+          <option value="kmp">KMP</option>
+          <option value="rabin">Rabin-Karp</option>
+          <option value="bm">Boyer–Moore (Bad Character)</option>
+        </select>
+        <label>Text</label>
+        <input id="textInput" value="ababcabcabababd"/>
+        <label>Pattern</label>
+        <input id="patternInput" value="ababd"/>
+        <div class="controls">
+          <button id="stringStartBtn">Start</button>
+          <button id="stringResetBtn">Reset</button>
+        </div>
+      </div>
+
+      <!-- GREEDY (left controls) -->
+      <div class="section" id="greedySettings">
+        <label>Greedy Algorithm</label>
+        <select id="greedyAlgo">
+          <option value="activity">Activity Selection</option>
+          <option value="knapsack">0/1 Knapsack</option>
+          <option value="egypt">Egyptian Fraction</option>
+          <option value="jobseq">Job Sequencing</option>
+          <option value="huffman">Huffman Coding</option>
+        </select>
+
+        <!-- Activity Selection -->
+        <div id="g-activity" style="margin-top:8px">
+          <label>Activities (format: start1,end1;start2,end2;...)</label>
+          <input id="activityInput" value="1,3;2,5;4,7;6,9;8,10;0,2"/>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="activityStartBtn">Run Activity Selection</button>
+          </div>
+        </div>
+
+        <!-- Knapsack -->
+        <div id="g-knapsack" style="margin-top:10px;display:none">
+          <label>Items (format: weight,value;weight,value;...)</label>
+          <input id="knapItems" value="2,10;3,15;5,20;7,25;1,5"/>
+          <label>Capacity</label>
+          <input id="knapCapacity" type="number" value="15" min="1"/>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="knapStartBtn">Solve Knapsack</button>
+          </div>
+        </div>
+
+        <!-- Egyptian Fractions -->
+        <div id="g-egypt" style="margin-top:10px;display:none">
+          <label>Numerator</label>
+          <input id="egyptNum" type="number" value="6"/>
+          <label>Denominator</label>
+          <input id="egyptDen" type="number" value="14"/>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="egyptStartBtn">Decompose</button>
+          </div>
+        </div>
+
+        <!-- Job Sequencing -->
+        <div id="g-jobseq" style="margin-top:10px;display:none">
+          <label>Jobs (format: id,deadline,profit;id,deadline,profit;...)</label>
+          <input id="jobInput" value="a,2,100;b,1,19;c,2,27;d,1,25;e,3,15"/>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="jobStartBtn">Schedule Jobs</button>
+          </div>
+        </div>
+
+        <!-- Huffman Coding -->
+        <div id="g-huffman" style="margin-top:10px;display:none">
+          <label>Text for Huffman Coding</label>
+          <input id="hufInput" value="hello world"/>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="runHufBtn">Build Huffman Tree</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CONVERTER (left controls) -->
+      <div class="section" id="converterSettings">
+        <label>Mode</label>
+        <select id="convMode">
+          <option value="dec2others">Decimal → Binary/Octal/Hex</option>
+          <option value="bin2others">Binary → Octal/Decimal/Hex</option>
+          <option value="oct2others">Octal → Binary/Decimal/Hex</option>
+          <option value="hex2others">Hex → Binary/Octal/Decimal</option>
+          <option value="math">Arithmetic Operation</option>
+          <option value="modulo">Modulo Operation</option>
+        </select>
+
+        <!-- Regular conversion inputs -->
+        <div id="regularConversion">
+          <label id="convInputLabel">Enter value</label>
+          <input id="convInput" value="123"/>
+        </div>
+
+        <!-- Math Operations Section -->
+<!-- Add this to your HTML where the math operations section is -->
+<!-- Update your input fields to indicate floating-point support -->
+<div class="section" id="mathOperations" style="display: none;">
+  <label>Operation</label>
+  <select id="mathOperation">
+    <option value="add">Addition</option>
+    <option value="subtract">Subtraction</option>
+    <option value="multiply">Multiplication</option>
+    <option value="divide">Division</option>
+  </select>
+
+  <label>Base</label>
+  <select id="mathBase">
+    <option value="2">Binary (Base 2)</option>
+    <option value="8">Octal (Base 8)</option>
+    <option value="10" selected>Decimal (Base 10)</option>
+    <option value="16">Hexadecimal (Base 16)</option>
+  </select>
+
+  <div style="display: flex; align-items: center; gap: 10px; margin: 15px 0;">
+    <input type="text" id="mathNum1" placeholder="First number (e.g., 1011.101)" style="flex: 1;">
+    <span id="mathOpSymbol" style="font-weight: bold; font-size: 1.2em;">+</span>
+    <input type="text" id="mathNum2" placeholder="Second number (e.g., 110.011)" style="flex: 1;">
+  </div>
+
+
+  <button onclick="runMathOperation()">Calculate</button>
+</div>
+
+<!-- Modulo Operations Section (no floating-point) -->
+<div class="section" id="moduloOperations" style="display: none;">
+  <label>Base</label>
+  <select id="moduloBase">
+    <option value="2">Binary (Base 2)</option>
+    <option value="8">Octal (Base 8)</option>
+    <option value="10" selected>Decimal (Base 10)</option>
+    <option value="16">Hexadecimal (Base 16)</option>
+  </select>
+
+  <div style="display: flex; align-items: center; gap: 10px; margin: 15px 0;">
+    <input type="text" id="moduloNum1" placeholder="Dividend (integer only)" style="flex: 1;">
+    <span style="font-weight: bold; font-size: 1.2em;">mod</span>
+    <input type="text" id="moduloNum2" placeholder="Divisor (integer only)" style="flex: 1;">
+  </div>
+
+  <div style="font-size: 0.8em; color: #666; margin-bottom: 10px;">
+    ⚠ Modulo operation requires integer numbers only
+  </div>
+
+  <button onclick="runModuloOperation()">Calculate Modulo</button>
+</div>
+
+
+        <!-- Regular conversion button -->
+        <div id="regularConversionButton" style="display:flex;gap:8px;margin-top:8px">
+          <button id="convRunBtn">Convert/Calculate</button>
+        </div>
+      </div>
+
+      <!-- GRAPH (left controls) -->
+      <div class="section" id="graphSettings">
+        <label>Nodes</label>
+        <input id="nodeCount" type="number" value="6" min="2" max="14"/>
+        <label>Edge density (prob %)</label>
+        <input id="edgeDensity" type="number" value="60" min="1" max="100"/>
+        <label>Algorithm</label>
+        <select id="graphAlgo">
+          <option value="kruskal">Kruskal</option>
+          <option value="prim">Prim</option>
+          <option value="boruvka">Borůvka</option>
+          <option value="dijkstra">Dijkstra</option>
+          <option value="dial">Dial</option>
+        </select>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="genGraphBtn">Generate Graph</button>
+          <button id="runGraphBtn">Run Algorithm</button>
+        </div>
+        <div class="small" id="graphInfo" style="margin-top:8px">Click generate first.</div>
+      </div>
+
+      <!-- PRIME (left controls) -->
+      <div class="section" id="primeSettings">
+        <label>Prime Algorithm</label>
+        <select id="primeAlgo">
+          <option value="trial">Trial Division</option>
+          <option value="sieve">Sieve of Eratosthenes</option>
+          <option value="fermat">Fermat Test</option>
+          <option value="miller">Miller-Rabin</option>
+          <option value="aks">AKS (simplified)</option>
+        </select>
+        <label>Enter a Value</label>
+        <input id="primeN" type="number" value="50" min="2"/>
+        <div class="controls">
+          <button id="primeStartBtn">Start</button>
+          <div class="pill">Delay is client-side only</div>
+        </div>
+      </div>
+
+    <div class="section" id="cryptoSettings">
+  <label>Cipher Algorithm</label>
+<select id="cryptoAlgo">
+  <option value="caesar">Caesar Cipher</option>
+  <option value="railfence">Rail Fence Cipher</option>
+  <option value="onetimepad">One-Time Pad</option>
+  <option value="columnar">Columnar Transposition</option>
+  <option value="vernam">Vernam Cipher</option>
+  <option value="playfair">Playfair Cipher</option>
+  <option value="vigenere">Vigenère Cipher</option>
+  <option value="affine">Affine Cipher</option>
+  <option value="scytale">Scytale Cipher</option>
+  <option value="hill">Hill Cipher</option>
+  <option value="substitution">Substitution Cipher</option>
+  <option value="transposition">Transposition Cipher</option>
+  <option value="sha256">SHA-256 Hash</option>
+  <option value="monoalphabetic">Monoalphabetic Cipher</option>
+  <option value="polyalphabetic">Polyalphabetic Cipher</option>
+  <option value="product">Product Cipher</option>
+  <option value="rsa">RSA Algorithm</option>
+  <option value="diffiehellman">Diffie-Hellman Key Exchange</option>
+</select>
+
+
+  <!-- Common inputs -->
+  <div style="margin-top:8px">
+    <label>Input Text</label>
+    <input id="cryptoInput" value="HELLO WORLD" placeholder="Enter text to process"/>
+    
+    <div id="cryptoKeyContainer">
+      <label>Key</label>
+      <input id="cryptoKey" value="3" placeholder="Enter key"/>
+    </div>
+    
+    <div id="cryptoAdditionalInputs" style="display:none">
+      <!-- Additional inputs for specific algorithms -->
+    </div>
+    
+    <div class="controls" style="margin-top: 10px;">
+      <button id="cryptoEncryptBtn">Encrypt</button>
+      <button id="cryptoDecryptBtn">Decrypt</button>
+      <button id="cryptoAnalyzeBtn" style="display: none;">Analyze</button>
+    </div>
+  </div>
+</div>
+
+
+      <!-- MORE (left controls) -->
+      <div class="section" id="moreSettings">
+        <label>More Algorithms</label>
+        <select id="moreAlgo">
+          <option value="gcd">GCD &amp; LCM (Euclidean)</option>
+          <option value="lcm">LCM Calculation</option>
+          <option value="extended-euclidean">Extended Euclidean</option>
+          <option value="chinese-remainder">Chinese Remainder Theorem</option>
+        </select>
+        <!-- In the MORE section, update the input labels -->
+<div style="margin-top:8px">
+  <label>Inputs</label>
+  <div style="display:flex;gap:8px;flex-direction:column">
+    <input id="moreA" placeholder="a / first number / n for Fibonacci/Factorial"/>
+    <input id="moreB" placeholder="b / second number / 'a1,m1;a2,m2;...' for CRT"/>
+  </div>
+  <div class="small" style="color: var(--muted); margin-top: 4px;">
+    For Chinese Remainder Theorem: Enter pairs like "2,3;3,5;2,7"
+  </div>
+  <div style="display:flex;gap:8px;margin-top:8px">
+    <button id="moreStartBtn">Start</button>
+    <button id="moreResetBtn">Reset</button>
+  </div>
+</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT VISUAL AREA -->
+  <div class="vis card" id="visualArea">
+    <!-- Sorting -->
+    <div id="sortVis" style="width:100%; display:none; flex-direction:column;">
+      <div class="bars" id="barsArea"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-top:8px;">
+        <div>
+          <div class="pill">Algo: <span id="curSortAlgo">-</span></div>
+          <div class="pill" style="margin-top:8px">Steps: <span id="stepCount">0</span></div>
+        </div>
+      </div>
+      <div id="treeCanvasWrap" style="margin-top:12px; display:none;">
+        <canvas height="400" id="treeCanvas" width="1200"></canvas>
+      </div>
+      <div class="outputBox small" id="sortLog">Steps will appear here.</div>
+    </div>
+
+    <!-- Searching -->
+    <div id="searchVis" style="width:100%; display:none; flex-direction:column;">
+      <div class="sboxes" id="searchBoxes"></div>
+      <div class="outputBox" id="searchResult">Status: idle</div>
+      <div class="outputBox small" id="searchLog">Steps will appear here.</div>
+    </div>
+
+    <!-- String -->
+    <div id="stringVis" style="width:100%; display:none; flex-direction:column;">
+      <div class="textBox" id="textBox"></div>
+      <div class="outputBox" id="stringResult">Status: idle</div>
+      <div class="outputBox small" id="stringLog">Steps will appear here.</div>
+    </div>
+
+    <!-- Greedy (visuals) -->
+  <div id="greedyVis" style="width:100%; display:none; flex-direction:column; gap:10px;">
+    <!-- Activity Selection Visual -->
+    <div id="g-activity-vis" style="display:none">
+      <div class="outputBox" id="g-activity-result"></div>
+      <div class="outputBox small" id="g-activity-steps"></div>
+    </div>
+
+    <!-- Knapsack Visual -->
+    <div id="g-knap-vis" style="display:none">
+     <div class="outputBox" id="g-knap-result"></div>
+     <div class="outputBox small" id="g-knap-steps"></div>
+    </div>
+
+    <!-- Egyptian Fractions Visual -->
+    <div id="g-egypt-vis" style="display:none">
+      <div class="outputBox" id="g-egypt-result"></div>
+      <div class="outputBox small" id="g-egypt-steps"></div>
+    </div>
+
+    <!-- Job Sequencing Visual -->
+    <div id="g-job-vis" style="display:none">
+      <div class="outputBox" id="g-job-result"></div>
+      <div class="outputBox small" id="g-job-steps"></div>
+    </div>
+
+    <!-- Huffman Coding Visual -->
+    <div id="g-huf-vis" style="display:none">
+      <div class="zoom-controls" style="margin-bottom:10px; display:flex; gap:10px; align-items:center;">
+        <span style="color: var(--muted); font-size: 13px;">Zoom Level:</span>
+          <span id="zoomLevel">100%</span>
+         <span style="color: var(--muted); font-size: 12px; margin-left: auto;">
+         (Scroll to zoom • Drag to pan • Double-click to reset)
+         </span>
+      </div>
+      <div class="canvas-container" style="overflow:auto; border:1px solid rgba(255,255,255,0.06); border-radius:8px; height: 600px; width: 100%;">
+        <canvas id="hufCanvas"></canvas>
+      </div>
+      <div class="outputBox" id="hufVisBox"></div>
+    </div>
+  </div>
+   <!-- Converter (visuals) -->
+<div id="converterVis" style="width:100%; display:none; flex-direction:column; gap: 20px;">
+  <div class="outputBox" id="converterOutput">No conversion yet.</div>
+  
+  <!-- Centered Calculation Steps Box -->
+  <div class="centered-steps-container">
+    <div class="math-steps" id="mathStepsBox" style="display: none;">
+      <label>Calculation Steps</label>
+      <div class="steps-content" id="mathStepsContent">
+        No calculation steps yet
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- Graph (visuals) -->
+    <div id="graphVis" style="width:100%; display:none; flex-direction:column; gap:10px;">
+      <canvas height="460" id="graphCanvas" width="780"></canvas>
+      <div class="outputBox" id="graphResult">No graph generated.</div>
+      <div class="outputBox small" id="graphSteps">Steps will appear here.</div>
+    </div>
+
+    <!-- Prime (visuals) -->
+    <div id="primeVis" style="width:100%; display:none; flex-direction:column; gap:10px;">
+      <div class="gridNums" id="primeGrid"></div>
+      <div class="outputBox small" id="primeLog">Steps will appear here.</div>
+    </div>
+
+<div id="cryptoVis" style="width:100%; display:none; flex-direction:column; gap:10px;">
+  <div class="outputBox" id="cryptoResult" style="min-height: 60px;">No operation performed yet.</div>
+  <div class="outputBox small" id="cryptoSteps" style="min-height: 200px; max-height: 400px; overflow-y: auto;">Steps will appear here.</div>
+  <div class="outputBox small" id="cryptoDetails" style="min-height: 100px;">Additional details will appear here.</div>
+</div>
+
+    <!-- More (visuals) -->
+    <div id="moreVis" style="width:100%; display:none; flex-direction:column; gap:10px;">
+      <div class="outputBox small" id="moreLog">Idle</div>
+      <div class="outputBox small" id="moreVisBox">Results will appear here.</div>
+    </div>
+
+  </div>
+</main>
+<footer>© 2025 Henmyr Tepacia. All Rights Reserved.</footer>  
+<script src="app.js"></script>
+</body>
+</html>

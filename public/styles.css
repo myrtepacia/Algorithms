@@ -1,0 +1,445 @@
+:root {
+  --bg: #0f1221;
+  --panel: #151826;
+  --muted: #9aa0b4;
+  --accent: #6ee7b7;
+  --accent2: #7dd3fc;
+  --card: #111319;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: #e6eef8;
+  font-family: Inter, system-ui, Arial, Helvetica, sans-serif;
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+}
+
+header {
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+h1 { margin: 0; font-size: 20px; }
+
+main {
+  display: flex;
+  gap: 18px;
+  padding: 18px;
+}
+
+.left { width: 360px; min-width: 260px; }
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  border: 1px solid rgba(255,255,255,0.03);
+  padding: 14px;
+  border-radius: 10px;
+}
+
+label { display: block; color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+
+select, input, button, textarea {
+  width: 100%;
+  padding: 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.06);
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+}
+button {
+  cursor: pointer;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  color: #061023;
+  font-weight: 700;
+  border: none;
+}
+.section { display: none; margin-top: 14px; }
+.visible { display: block; }
+.vis { flex: 1; display:flex; align-items:center; justify-content:center; min-height:560px; position:relative; }
+
+select { background-color: #1e1e2f; color: #fff; border: 1px solid #333; outline: none; appearance: none; }
+select option { background-color: #1e1e2f; color: #fff; }
+
+/* Math operations */
+
+
+/* Center the math steps */
+
+
+.math-steps {
+  margin: 0 auto;
+}
+
+.math-steps label {
+  text-align: center;
+  display: block;
+}
+
+.math-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.math-row input, .math-row select {
+  flex: 1;
+}
+
+.math-operation {
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--accent);
+  min-width: 30px;
+  text-align: center;
+}
+
+.math-result {
+  background: var(--card);
+  padding: 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+  border: 1px solid rgba(255,255,255,0.03);
+}
+
+.math-steps {
+  background: #071022;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  display: none;
+}
+
+/* Graph improvements */
+.graph-stats {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.stat-pill {
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  color: #061023;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.mst-total {
+  background: linear-gradient(90deg, #ffd86b, #ffb86b);
+  color: #061023;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Graph step visualization */
+.graph-step {
+  margin: 5px 0;
+  padding: 8px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.03);
+  border-left: 3px solid var(--accent);
+}
+
+.graph-step.added {
+  border-left-color: #6ee7b7;
+}
+
+.graph-step.skipped {
+  border-left-color: #ff6b6b;
+}
+
+.graph-step.current {
+  border-left-color: #ffd86b;
+  background: rgba(255,216,107,0.1);
+}
+
+/* ===== Sorting bars ===== */
+
+.bar.gap-highlight {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.bar.active {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: rgba(16, 185, 129, 0.4) !important;
+}
+
+.bar.compare {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+.bar.swap {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background-color: rgba(239, 68, 68, 0.4) !important;
+}
+.bars {
+  display: flex;
+  align-items: end;
+  gap: 6px;
+  height: 340px;
+  width: 100%;
+  padding: 14px;
+  flex-wrap: wrap;
+}
+.bar {
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+  flex: 1;
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  color: #061023;
+  font-weight: 700;
+  transition: height 160ms ease, background 120ms ease;
+  padding-bottom: 6px;
+  min-width: 26px;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+
+.bar.compare { background: linear-gradient(180deg, #ffd86b, #ffb86b); }
+.bar.swap    { background: linear-gradient(180deg, #ff9f6b, #ff6b6b); }
+
+.controls { display:flex; gap:10px; margin-top:12px; flex-wrap:wrap; }
+.pill { padding:6px 10px; border-radius:10px; background:#071026; color:var(--muted); border:1px solid rgba(255,255,255,0.02); font-size:13px; }
+
+.textBox { padding:12px; border-radius:8px; background:#071022; border:1px solid rgba(255,255,255,0.02); min-height:56px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.char { padding:8px 10px; border-radius:6px; background:transparent; }
+.char.active { background: linear-gradient(90deg,#ffd86b,#ffd06b); color:#061023; }
+.char.match  { background: linear-gradient(90deg,#6ee7b7,#3dd5ff); color:#061023; }
+
+.timeline { width:100%; height:140px; border-radius:8px; padding:10px; border:1px solid rgba(255,255,255,0.03); background:var(--card); display:flex; gap:6px; align-items:center; position:relative; overflow:hidden; }
+.activity { height:40px; border-radius:6px; color:#061023; display:flex; align-items:center; justify-content:center; font-weight:700; transition:all 240ms ease; padding:6px; }
+.selectedActivity { box-shadow:0 6px 18px rgba(125,211,252,0.08); transform:scale(1.03); }
+
+.outputBox { margin-top:10px; padding:10px; border-radius:8px; background:#0b1020; border:1px solid rgba(255,255,255,0.02); min-height:46px; font-size: 14px; white-space: pre-line; }
+.codeBox { display:block; padding:8px; background:#071022; border-radius:8px; margin-top:8px; overflow:auto; border:1px solid rgba(255,255,255,0.02); }
+
+/* ===== Searching as BOXES (not bars) ===== */
+.sboxes {
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+  padding:12px;
+  min-height:120px;
+}
+.sbox {
+  width:42px; height:42px;
+  display:flex; align-items:center; justify-content:center;
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:8px;
+  background:#081025;
+  font-weight:700;
+}
+.sbox.compare { background: linear-gradient(90deg,#ffd86b,#ffd06b); color:#061023; }
+.sbox.match   { background: linear-gradient(90deg,#6ee7b7,#3dd5ff); color:#061023; }
+
+/* Huffman */
+#hufTree { overflow-x: auto; }
+#hufCanvas { width: 100%; height: 360px; display: block; display: block; background: #0f1724;}
+
+.canvas-container {
+  background: #0f1724;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.zoom-controls {
+  background: rgba(15, 23, 36, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+}
+/* Smaller heap/tree canvas */
+/* Tree Canvas Zoom Styles */
+#treeCanvasWrap {
+  overflow: auto;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  height: 400px;
+  width: 100%;
+  position: relative;
+  margin-top: 12px;
+}
+
+#treeCanvas {
+  display: block;
+  background: transparent;
+}
+
+.tree-zoom-controls {
+  margin-bottom: 10px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.huf-table {
+  font-size: 16px; /* Bigger table font */
+}
+
+.huf-table th,
+.huf-table td {
+  padding: 12px 8px; /* More padding for better spacing */
+}
+
+.char-col {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.code-col code {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* Make sure the canvas is large enough for zooming */
+#treeCanvas {
+  min-width: 800px;
+  min-height: 400px;
+}
+/* Huffman table spacing */
+.huf-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.huf-table thead th { font-weight: 600; color: var(--muted, #9aa4b2); padding: 10px 14px; }
+.huf-table td { padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+.huf-table .tabnums { font-variant-numeric: tabular-nums; }
+.huf-table .char-col { text-align: left;  }
+.huf-table .freq-col { text-align: left; }
+.huf-table .code-col { text-align: left; letter-spacing: .5px; }
+.huf-table .bits-col { text-align: center; }
+
+/* Primes grid */
+.gridNums { display: grid; grid-template-columns: repeat(auto-fit, minmax(36px, 1fr)); gap: 8px; padding: 10px; border-radius: 8px; background: #071022; border: 1px solid rgba(255,255,255,0.02); }
+.numCell { height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: #081025; border: 1px solid rgba(255,255,255,0.02); font-weight: 700; }
+.numCell.prime { background: linear-gradient(90deg, var(--accent), var(--accent2)); color:#061023; }
+.numCell.crossed { background: rgba(255,255,255,0.03); color:#8b93a8; text-decoration: line-through; }
+
+/* Pascal triangle preview */
+#pascalTri { display:flex; flex-direction:column; gap:4px; }
+.pasRow { display:flex; justify-content:center; gap:6px; }
+.pasCell {
+  min-width:42px; padding:6px 8px;
+  background:#081025; border:1px solid rgba(255,255,255,0.06);
+  border-radius:8px; text-align:center; font-variant-numeric: tabular-nums;
+}
+.pasCell.bad { background:#270f18; border-color:rgba(255,86,86,0.35); color:#ffb3b3; }
+.pasCell.ok  { background:#0f1827; border-color:rgba(110,231,183,0.3); color:#bff4e3; }
+
+.small { font-size: 13px; color: var(--muted); }
+
+footer { padding: 12px; color: var(--muted); text-align: center; }
+
+@media (max-width: 980px) {
+  main { flex-direction: column; }
+  .left { width: 100%; }
+}
+
+/* Ensure math operations are visible */
+#mathOperations {
+  display: none;
+}
+
+#mathOperations:not([style*="display: none"]) {
+  display: block !important;
+}
+
+.math-steps {
+  background: #071022;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* Cryptography Styles */
+.crypto-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.crypto-cell {
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 8px;
+  border-radius: 4px;
+  text-align: center;
+  font-family: monospace;
+}
+
+.crypto-input {
+  background: var(--bg-dark);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: white;
+  padding: 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  width: 100%;
+}
+
+.crypto-matrix {
+  display: inline-grid;
+  gap: 4px;
+  margin: 5px;
+  padding: 5px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 4px;
+}
+
+.matrix-cell {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.1);
+  font-family: monospace;
+}
+
+.substitution-table {
+  display: grid;
+  grid-template-columns: repeat(13, 1fr);
+  gap: 2px;
+  margin: 10px 0;
+}
+
+.substitution-pair {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px;
+  border: 1px solid rgba(255,255,255,0.1);
+  font-family: monospace;
+  font-size: 12px;
+}
