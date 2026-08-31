@@ -2794,7 +2794,7 @@ function paintGraph(){
     const tone = CHIP[e.state === 'idle' && i === gHoverEdge ? 'hover' : e.state] || CHIP.idle;
     const text = String(e.w);
     const w = Math.max(22, c.measureText(text).width + 14);
-    roundRect(c, m.x - w / 2, m.y - 10, w, 20, 7);
+    roundRect(c, m.x - w / 2, m.y - 9, w, 18, 2);
     c.fillStyle = tone.fill;
     c.fill();
     c.strokeStyle = tone.line;
