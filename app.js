@@ -77,6 +77,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const $ = (id)=>document.getElementById(id);
 
+/* Canvas palette. Mirrors the tokens in styles.css - one tertiary hue
+   (blue-violet) for the interface, amber and red for algorithm state.
+   Change these together with the :root block. */
+const UI = {
+  node:       '#1d1d26',
+  nodeActive: '#2b2545',
+  line:       'rgba(255,255,255,0.10)',
+  lineSoft:   'rgba(255,255,255,0.07)',
+  edge:       'rgba(255,255,255,0.20)',
+  text:       '#e4e2ea',
+  muted:      '#97949f',
+  accent:     '#7c6ae0',
+  accentHi:   '#8f80e8',
+  accentInk:  '#ffffff',
+  warn:       '#d3a34a',
+  warnLine:   'rgba(211,163,74,0.9)',
+  danger:     '#cc6b64'
+};
+
 
 const API_BASE = '';
 const __nativeFetch = typeof window.fetch === 'function' ? window.fetch.bind(window) : null;
@@ -911,20 +930,18 @@ function displayMathResult(res, operation, outputBox, stepsBox) {
 /* One formatter for every arithmetic mode so that the step lists in each
    category look and read the same way. Plain text, no pictograms. */
 const STEP_TONES = [
-  { keys: ['Final result', 'Final quotient', 'Final remainder'], color: '#e8eefc', bold: true },
-  { keys: ['Carry:', 'Borrow:', 'Remainder:', 'Summing partial products'], color: '#ffd08a' },
-  { keys: ['Result digit:', 'Quotient:'], color: '#6ee7b7' },
-  { keys: ['Partial product:'], color: '#c4b5fd' },
-  { keys: ['Borrow 1 from next column'], color: '#ff9d9d' },
-  { keys: ['Converted', 'Bring down', 'Multiply by'], color: '#929dbb' },
-  { keys: ['Step '], color: '#7dd3fc' }
+  { keys: ['Final result', 'Final quotient', 'Final remainder'], color: '#e4e2ea', bold: true },
+  { keys: ['Carry:', 'Borrow:', 'Remainder:', 'Summing partial products'], color: '#d3a34a' },
+  { keys: ['Result digit:', 'Quotient:', 'Partial product:'], color: '#8f80e8' },
+  { keys: ['Borrow 1 from next column'], color: '#cc6b64' },
+  { keys: ['Converted', 'Bring down', 'Multiply by'], color: '#97949f' }
 ];
 
 function formatSteps(steps) {
   return (steps || []).map(step => {
     const text = String(step);
     const tone = STEP_TONES.find(t => t.keys.some(k => text.includes(k)));
-    const color = tone ? tone.color : '#c8d2ea';
+    const color = tone ? tone.color : '#c3c0cb';
     const weight = tone && tone.bold ? ';font-weight:650' : '';
     return `<span style="color:${color}${weight}">• ${text}</span>`;
   }).join('<br>');
@@ -1129,7 +1146,7 @@ function setupTreeZoom() {
 
   treeCanvasWrap.style.cursor = 'grab';
   treeCanvasWrap.style.overflow = 'hidden';
-  treeCanvasWrap.style.border = '1px solid rgba(255,255,255,0.06)';
+  treeCanvasWrap.style.border = `1px solid ${UI.lineSoft}`;
   treeCanvasWrap.style.borderRadius = '8px';
   treeCanvasWrap.style.height = '400px';
   treeCanvasWrap.style.width = '100%';
@@ -2188,7 +2205,7 @@ function drawHeapTree(arr, highlights){
     const y=16 + levelGapY*level + 10;
     pos.push({x,y});
   }
-  tctx.strokeStyle='rgba(255,255,255,0.06)'; tctx.lineWidth=2;
+  tctx.strokeStyle=UI.lineSoft; tctx.lineWidth=2;
   for (let i=0;i<arr.length;i++){
     const L=2*i+1, R=2*i+2;
     if (L<arr.length){ tctx.beginPath(); tctx.moveTo(pos[i].x,pos[i].y); tctx.lineTo(pos[L].x,pos[L].y); tctx.stroke(); }
@@ -2196,9 +2213,9 @@ function drawHeapTree(arr, highlights){
   }
   for (let i=0;i<arr.length;i++){
     const {x,y}=pos[i];
-    tctx.beginPath(); tctx.fillStyle=(highlights && highlights.has(i))?'#1b2438':'#0f1724'; tctx.strokeStyle='rgba(255,255,255,0.06)'; tctx.lineWidth=2;
+    tctx.beginPath(); tctx.fillStyle=(highlights && highlights.has(i))?UI.nodeActive:UI.node; tctx.strokeStyle=UI.lineSoft; tctx.lineWidth=2;
     tctx.arc(x,y,12,0,Math.PI*2); tctx.fill(); tctx.stroke();
-    tctx.fillStyle='white'; const s=String(arr[i]); tctx.fillText(s, x-(s.length>1?7:4), y+0);
+    tctx.fillStyle=UI.text; const s=String(arr[i]); tctx.fillText(s, x-(s.length>1?7:4), y+0);
   }
 }
 
@@ -2221,15 +2238,15 @@ function drawBSTFromArray(arr){
   inorder.forEach((e,i)=>{ pos.set(e.n,{x:margin+gap*(i+1), y:12+levelGapY*e.d+10}); });
   function drawEdges(n){
     if(!n) return; const p=pos.get(n);
-    if(n.L){ const lp=pos.get(n.L); tctx.beginPath(); tctx.strokeStyle='rgba(255,255,255,0.06)'; tctx.moveTo(p.x,p.y); tctx.lineTo(lp.x,lp.y); tctx.stroke(); drawEdges(n.L); }
-    if(n.R){ const rp=pos.get(n.R); tctx.beginPath(); tctx.strokeStyle='rgba(255,255,255,0.06)'; tctx.moveTo(p.x,p.y); tctx.lineTo(rp.x,rp.y); tctx.stroke(); drawEdges(n.R); }
+    if(n.L){ const lp=pos.get(n.L); tctx.beginPath(); tctx.strokeStyle=UI.lineSoft; tctx.moveTo(p.x,p.y); tctx.lineTo(lp.x,lp.y); tctx.stroke(); drawEdges(n.L); }
+    if(n.R){ const rp=pos.get(n.R); tctx.beginPath(); tctx.strokeStyle=UI.lineSoft; tctx.moveTo(p.x,p.y); tctx.lineTo(rp.x,rp.y); tctx.stroke(); drawEdges(n.R); }
   }
   drawEdges(root);
   tctx.font='11px Inter, Arial';
   for (const [node,p] of pos.entries()){
-    tctx.beginPath(); tctx.fillStyle='#0f1724'; tctx.strokeStyle='rgba(255,255,255,0.06)'; tctx.lineWidth=2;
+    tctx.beginPath(); tctx.fillStyle=UI.node; tctx.strokeStyle=UI.lineSoft; tctx.lineWidth=2;
     tctx.arc(p.x,p.y,12,0,Math.PI*2); tctx.fill(); tctx.stroke();
-    tctx.fillStyle='white'; const s=String(node.v); tctx.fillText(s, p.x-(s.length>1?7:4), p.y+2);
+    tctx.fillStyle=UI.text; const s=String(node.v); tctx.fillText(s, p.x-(s.length>1?7:4), p.y+2);
   }
 }
 
@@ -2618,9 +2635,9 @@ let gHoverNode = -1, gHoverEdge = -1, gDragNode = -1, gFocusNode = -1;
 let gActiveNodes = new Set();
 let gRaf = null, gEditor = null;
 
-const G_EDGE_IDLE   = { r: 255, g: 255, b: 255, a: 0.10, w: 1.6 };
-const G_EDGE_TREE   = { r: 110, g: 231, b: 183, a: 0.95, w: 3.2 };
-const G_EDGE_ACTIVE = { r: 255, g: 208, b: 138, a: 0.95, w: 3.6 };
+const G_EDGE_IDLE   = { r: 255, g: 255, b: 255, a: 0.11, w: 1.6 };
+const G_EDGE_TREE   = { r: 124, g: 106, b: 224, a: 1.00, w: 3.2 };
+const G_EDGE_ACTIVE = { r: 211, g: 163, b: 74,  a: 1.00, w: 3.6 };
 
 function gClamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
 
@@ -2766,10 +2783,10 @@ function paintGraph(){
   c.textAlign = 'center';
   c.textBaseline = 'middle';
   const CHIP = {
-    active: { fill: 'rgba(255,208,138,0.18)', line: 'rgba(255,208,138,0.65)', text: '#ffd08a' },
-    tree:   { fill: 'rgba(110,231,183,0.16)', line: 'rgba(110,231,183,0.6)',  text: '#6ee7b7' },
-    hover:  { fill: 'rgba(125,211,252,0.18)', line: 'rgba(125,211,252,0.7)',  text: '#7dd3fc' },
-    idle:   { fill: 'rgba(10,15,29,0.9)',     line: 'rgba(255,255,255,0.09)', text: '#929dbb' }
+    active: { fill: 'rgba(211,163,74,0.16)',  line: 'rgba(211,163,74,0.7)',  text: UI.warn },
+    tree:   { fill: 'rgba(124,106,224,0.20)', line: 'rgba(124,106,224,0.8)', text: '#b7abf5' },
+    hover:  { fill: 'rgba(124,106,224,0.10)', line: 'rgba(124,106,224,0.5)', text: UI.accentHi },
+    idle:   { fill: 'rgba(19,19,24,0.92)',    line: UI.line,                 text: UI.muted }
   };
   gEdges.forEach((e, i) => {
     const m = edgeMid(e);
@@ -2791,27 +2808,14 @@ function paintGraph(){
   c.font = `700 ${R > 17 ? 14 : 12}px Inter, Segoe UI, system-ui, Arial, sans-serif`;
   for (const n of gNodes){
     const g = n.glow;
-    if (g > 0.01){
-      c.beginPath();
-      c.arc(n.x, n.y, R + 6 + g * 4, 0, Math.PI * 2);
-      c.fillStyle = `rgba(110,231,183,${0.16 * g})`;
-      c.fill();
-    }
     c.beginPath();
     c.arc(n.x, n.y, R, 0, Math.PI * 2);
-    if (g > 0.01){
-      const grad = c.createLinearGradient(n.x - R, n.y - R, n.x + R, n.y + R);
-      grad.addColorStop(0, `rgba(110,231,183,${0.25 + 0.75 * g})`);
-      grad.addColorStop(1, `rgba(125,211,252,${0.25 + 0.75 * g})`);
-      c.fillStyle = grad;
-    } else {
-      c.fillStyle = '#0d1322';
-    }
+    c.fillStyle = g > 0.01 ? `rgba(124,106,224,${0.18 + 0.82 * g})` : UI.node;
     c.fill();
-    c.strokeStyle = g > 0.01 ? `rgba(255,255,255,${0.15 + 0.25 * g})` : 'rgba(255,255,255,0.16)';
+    c.strokeStyle = g > 0.01 ? `rgba(255,255,255,${0.12 + 0.2 * g})` : UI.edge;
     c.lineWidth = 2;
     c.stroke();
-    c.fillStyle = g > 0.5 ? '#05192b' : '#e8eefc';
+    c.fillStyle = g > 0.5 ? UI.accentInk : UI.text;
     c.fillText(String(n.label), n.x, n.y + 0.5);
   }
 }
@@ -3922,7 +3926,7 @@ function drawTournamentTree(T, leafCount, highlights=new Set()){
     const L=2*i+1,R=2*i+2; 
     if (L<T.length){ 
       ctx.beginPath(); 
-      ctx.strokeStyle= (highlights.has(i)||highlights.has(L))?'rgba(255,182,88,0.85)':'rgba(255,255,255,0.06)'; 
+      ctx.strokeStyle= (highlights.has(i)||highlights.has(L))?UI.warnLine:UI.lineSoft; 
       ctx.lineWidth = 2;
       ctx.moveTo(pos[i].x,pos[i].y); 
       ctx.lineTo(pos[L].x,pos[L].y); 
@@ -3930,7 +3934,7 @@ function drawTournamentTree(T, leafCount, highlights=new Set()){
     } 
     if (R<T.length){ 
       ctx.beginPath(); 
-      ctx.strokeStyle=(highlights.has(i)||highlights.has(R))?'rgba(255,182,88,0.85)':'rgba(255,255,255,0.06)'; 
+      ctx.strokeStyle=(highlights.has(i)||highlights.has(R))?UI.warnLine:UI.lineSoft; 
       ctx.lineWidth = 2;
       ctx.moveTo(pos[i].x,pos[i].y); 
       ctx.lineTo(pos[R].x,pos[R].y); 
@@ -3945,14 +3949,14 @@ function drawTournamentTree(T, leafCount, highlights=new Set()){
   for (let i=0;i<T.length;i++){ 
     const {x,y}=pos[i]; 
     ctx.beginPath(); 
-    ctx.fillStyle=highlights.has(i)?'#1b2438':'#0f1724'; 
-    ctx.strokeStyle=highlights.has(i)?'rgba(255,182,88,0.8)':'rgba(255,255,255,0.08)'; 
+    ctx.fillStyle=highlights.has(i)?UI.nodeActive:UI.node; 
+    ctx.strokeStyle=highlights.has(i)?UI.warnLine:UI.line; 
     ctx.lineWidth=2;
     ctx.arc(x,y,nodeRadius,0,Math.PI*2); 
     ctx.fill(); 
     ctx.stroke(); 
 
-    ctx.fillStyle='white'; 
+    ctx.fillStyle=UI.text; 
     const s=fmt(T[i].val); 
     ctx.fillText(s, x, y+1); 
   }
@@ -4070,7 +4074,7 @@ function drawHeapTree(arr, highlights){
     pos.push({x,y});
   }
 
-  ctx.strokeStyle='rgba(255,255,255,0.06)'; 
+  ctx.strokeStyle=UI.lineSoft; 
   ctx.lineWidth=2;
   for (let i=0;i<arr.length;i++){
     const L=2*i+1, R=2*i+2;
@@ -4095,14 +4099,14 @@ function drawHeapTree(arr, highlights){
   for (let i=0;i<arr.length;i++){
     const {x,y}=pos[i];
     ctx.beginPath(); 
-    ctx.fillStyle=(highlights && highlights.has(i))?'#1b2438':'#0f1724'; 
-    ctx.strokeStyle=(highlights && highlights.has(i))?'rgba(255,182,88,0.8)':'rgba(255,255,255,0.08)'; 
+    ctx.fillStyle=(highlights && highlights.has(i))?UI.nodeActive:UI.node; 
+    ctx.strokeStyle=(highlights && highlights.has(i))?UI.warnLine:UI.line; 
     ctx.lineWidth=2;
     ctx.arc(x,y,nodeRadius,0,Math.PI*2); 
     ctx.fill(); 
     ctx.stroke();
 
-    ctx.fillStyle='white'; 
+    ctx.fillStyle=UI.text; 
     const s=String(arr[i]); 
     ctx.fillText(s, x, y+1);
   }
@@ -4203,7 +4207,7 @@ function drawBST(root){
     if(n.L && pos.has(n.L)){ 
       const lp=pos.get(n.L); 
       ctx.beginPath(); 
-      ctx.strokeStyle='rgba(255,255,255,0.06)'; 
+      ctx.strokeStyle=UI.lineSoft; 
       ctx.lineWidth = 2;
       ctx.moveTo(p.x,p.y); 
       ctx.lineTo(lp.x,lp.y); 
@@ -4213,7 +4217,7 @@ function drawBST(root){
     if(n.R && pos.has(n.R)){ 
       const rp=pos.get(n.R); 
       ctx.beginPath(); 
-      ctx.strokeStyle='rgba(255,255,255,0.06)'; 
+      ctx.strokeStyle=UI.lineSoft; 
       ctx.lineWidth = 2;
       ctx.moveTo(p.x,p.y); 
       ctx.lineTo(rp.x,rp.y); 
@@ -4229,14 +4233,14 @@ function drawBST(root){
 
   for (const [node,p] of pos){ 
     ctx.beginPath(); 
-    ctx.fillStyle='#0f1724'; 
-    ctx.strokeStyle='rgba(255,255,255,0.08)'; 
+    ctx.fillStyle=UI.node; 
+    ctx.strokeStyle=UI.line; 
     ctx.lineWidth=2;
     ctx.arc(p.x,p.y,nodeRadius,0,Math.PI*2); 
     ctx.fill(); 
     ctx.stroke(); 
 
-    ctx.fillStyle='white'; 
+    ctx.fillStyle=UI.text; 
     const s=String(node.v); 
     ctx.fillText(s, p.x, p.y+1); 
   }
@@ -4246,7 +4250,7 @@ function updateTreeCanvasWrapper() {
   const wrap = document.getElementById('treeCanvasWrap');
   if (wrap) {
     wrap.style.overflow = 'hidden';
-    wrap.style.border = '1px solid rgba(255,255,255,0.06)';
+    wrap.style.border = `1px solid ${UI.lineSoft}`;
     wrap.style.borderRadius = '8px';
     wrap.style.height = '400px';
     wrap.style.width = '100%';
@@ -4486,7 +4490,7 @@ function drawHuffmanTree(struct) {
     if (node.left) {
       const childPos = nodePositions.get(node.left);
       if (childPos) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.strokeStyle = UI.edge;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(parentPos.x, parentPos.y);
@@ -4495,7 +4499,7 @@ function drawHuffmanTree(struct) {
 
         const midX = (parentPos.x + childPos.x) / 2;
         const midY = (parentPos.y + childPos.y) / 2;
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = UI.text;
         ctx.font = 'bold 16px Inter, Arial';
         ctx.fillText('0', midX - 20, midY - 15);
       }
@@ -4504,7 +4508,7 @@ function drawHuffmanTree(struct) {
     if (node.right) {
       const childPos = nodePositions.get(node.right);
       if (childPos) {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.strokeStyle = UI.edge;
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(parentPos.x, parentPos.y);
@@ -4513,7 +4517,7 @@ function drawHuffmanTree(struct) {
 
         const midX = (parentPos.x + childPos.x) / 2;
         const midY = (parentPos.y + childPos.y) / 2;
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = UI.text;
         ctx.font = 'bold 16px Inter, Arial';
         ctx.fillText('1', midX + 15, midY - 15);
       }
@@ -4529,14 +4533,14 @@ function drawHuffmanTree(struct) {
     for (const [node, pos] of nodePositions) {
 
       ctx.beginPath();
-      ctx.fillStyle = '#0f1724';
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.fillStyle = UI.node;
+      ctx.strokeStyle = UI.edge;
       ctx.lineWidth = 3;
       ctx.arc(pos.x, pos.y, nodeRadius, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = '#ffffff';
+      ctx.fillStyle = UI.text;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
 
@@ -5096,8 +5100,8 @@ document.addEventListener('DOMContentLoaded', function() {
 const style = document.createElement('style');
 style.textContent = `
   .gap-highlight {
-    border: 2px solid #f59e0b !important;
-    box-shadow: 0 0 8px #f59e0b !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 `;
 document.head.appendChild(style);

@@ -1,34 +1,39 @@
 /* =========================================================
    Algorithm Visualizer - design system
-   One scale, one rhythm, one set of components, used by
-   every category so that all panels look and behave alike.
+
+   Colour rule: one tertiary hue (blue-violet) carries the whole
+   interface. Amber and a muted red are reserved for algorithm
+   state only, so a colour on screen always means something.
+   Flat fills throughout - no gradients, no glows.
    ========================================================= */
 
 :root {
-  /* surfaces */
-  --bg: #0b0e1a;
-  --bg-glow-a: rgba(110, 231, 183, 0.07);
-  --bg-glow-b: rgba(125, 211, 252, 0.07);
-  --panel: #111728;
-  --panel-2: #0d1322;
-  --sunken: #0a0f1d;
-  --card: #111319;
+  /* surfaces - neutral graphite */
+  --bg: #16161c;
+  --panel: #1d1d26;
+  --panel-2: #191921;
+  --sunken: #131318;
+  --card: #1d1d26;
 
   /* lines */
-  --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.14);
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.15);
 
   /* type */
-  --text: #e8eefc;
-  --muted: #929dbb;
-  --ink: #05192b;
+  --text: #e4e2ea;
+  --muted: #97949f;
+  --ink: #ffffff;
 
-  /* accents */
-  --accent: #6ee7b7;
-  --accent2: #7dd3fc;
-  --warn: #ffd08a;
-  --warn2: #ffb86b;
-  --danger: #ff9d9d;
+  /* the tertiary: blue-violet */
+  --accent: #7c6ae0;
+  --accent-hi: #8f80e8;
+  --accent-dim: #6857c9;
+  --accent-quiet: rgba(124, 106, 224, 0.15);
+
+  /* algorithm state only */
+  --warn: #d3a34a;
+  --warn-quiet: rgba(211, 163, 74, 0.15);
+  --danger: #cc6b64;
 
   /* spacing scale */
   --s1: 4px;
@@ -53,9 +58,9 @@
   --t-slow: 340ms;
 
   /* elevation */
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --shadow-2: 0 10px 30px rgba(0, 0, 0, 0.35);
-  --ring: 0 0 0 3px rgba(125, 211, 252, 0.28);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --ring: 0 0 0 3px rgba(124, 106, 224, 0.32);
 }
 
 * { box-sizing: border-box; }
@@ -65,11 +70,7 @@ html { scroll-behavior: smooth; }
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(1100px 620px at 12% -12%, var(--bg-glow-a), transparent 60%),
-    radial-gradient(900px 560px at 92% -6%, var(--bg-glow-b), transparent 58%),
-    var(--bg);
-  background-attachment: fixed;
+  background: var(--bg);
   color: var(--text);
   font-family: Inter, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
   font-size: 15px;
@@ -86,7 +87,7 @@ header {
   z-index: 20;
   padding: var(--s4) var(--s6);
   border-bottom: 1px solid var(--line);
-  background: rgba(11, 14, 26, 0.78);
+  background: rgba(22, 22, 28, 0.86);
   backdrop-filter: blur(14px);
   display: flex;
   align-items: center;
@@ -94,11 +95,10 @@ header {
 }
 
 header .brand-mark {
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   border-radius: var(--r-sm);
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  box-shadow: 0 6px 18px rgba(110, 231, 183, 0.22);
+  background: var(--accent);
   flex: none;
 }
 
@@ -142,8 +142,7 @@ main {
 }
 
 .card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.008));
-  background-color: var(--panel);
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   padding: var(--s5);
@@ -204,7 +203,7 @@ label {
 }
 
 .field-value {
-  color: var(--accent);
+  color: var(--accent-hi);
   font-size: 12.5px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
@@ -233,18 +232,18 @@ textarea {
               background-color var(--t-fast) var(--ease);
 }
 
-input::placeholder { color: #6b7593; }
+input::placeholder { color: #6d6a76; }
 
 select:hover,
 input:hover,
-textarea:hover { border-color: rgba(255, 255, 255, 0.22); }
+textarea:hover { border-color: rgba(255, 255, 255, 0.24); }
 
 select:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 button:focus-visible {
   outline: none;
-  border-color: var(--accent2);
+  border-color: var(--accent);
   box-shadow: var(--ring);
 }
 
@@ -258,7 +257,7 @@ select {
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
 }
-select option { background-color: #141b2d; color: var(--text); }
+select option { background-color: #1d1d26; color: var(--text); }
 
 input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
 input[type="number"]::-webkit-outer-spin-button,
@@ -269,30 +268,30 @@ input[type="range"] {
   appearance: none;
   -webkit-appearance: none;
   padding: 0;
-  height: 6px;
+  height: 5px;
   border: none;
   border-radius: var(--r-pill);
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  background: var(--accent);
   cursor: pointer;
 }
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  background: #fff;
-  border: 3px solid var(--ink);
+  background: var(--text);
+  border: 3px solid var(--bg);
   box-shadow: var(--shadow-1);
   transition: transform var(--t-fast) var(--ease);
 }
 input[type="range"]:hover::-webkit-slider-thumb { transform: scale(1.15); }
 input[type="range"]:active::-webkit-slider-thumb { transform: scale(0.96); }
 input[type="range"]::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  background: #fff;
-  border: 3px solid var(--ink);
+  background: var(--text);
+  border: 3px solid var(--bg);
 }
 
 /* ===================== Buttons (one size, one shape) ===================== */
@@ -302,28 +301,28 @@ button {
   padding: 10px 14px;
   border-radius: var(--r-md);
   border: 1px solid transparent;
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  background: var(--accent);
   color: var(--ink);
   font-family: inherit;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 600;
   letter-spacing: 0.01em;
   cursor: pointer;
   transition: transform var(--t-fast) var(--ease),
-              filter var(--t-fast) var(--ease),
-              box-shadow var(--t-fast) var(--ease),
-              background-color var(--t-fast) var(--ease);
+              background-color var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease);
 }
-button:hover { filter: brightness(1.07); box-shadow: 0 6px 18px rgba(110, 231, 183, 0.18); }
-button:active { transform: translateY(1px) scale(0.995); filter: brightness(0.97); }
-button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+button:hover { background: var(--accent-hi); }
+button:active { transform: translateY(1px); background: var(--accent-dim); }
+button:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
 button.ghost {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
   border-color: var(--line-strong);
   color: var(--text);
 }
-button.ghost:hover { background: rgba(255, 255, 255, 0.09); box-shadow: none; }
+button.ghost:hover { background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.24); }
+button.ghost:active { background: rgba(255, 255, 255, 0.02); }
 
 button.icon {
   width: 38px;
@@ -342,7 +341,7 @@ button.icon {
 .controls > button { flex: 1 1 120px; }
 
 .stepper { display: flex; gap: var(--s2); align-items: stretch; }
-.stepper input { text-align: center; font-variant-numeric: tabular-nums; }
+.stepper input { flex: 1; text-align: center; font-variant-numeric: tabular-nums; }
 
 /* ===================== Pills, headings, output ===================== */
 
@@ -352,7 +351,7 @@ button.icon {
   gap: 6px;
   padding: 5px 11px;
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
   border: 1px solid var(--line);
   color: var(--muted);
   font-size: 12.5px;
@@ -365,8 +364,9 @@ button.icon {
   align-items: center;
   padding: 5px 11px;
   border-radius: var(--r-pill);
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
-  color: var(--ink);
+  background: var(--accent-quiet);
+  border: 1px solid var(--accent);
+  color: var(--accent-hi);
   font-weight: 650;
   font-size: 12.5px;
 }
@@ -454,7 +454,7 @@ button.icon {
 }
 
 .bar {
-  background: linear-gradient(180deg, var(--accent), var(--accent2));
+  background: var(--accent);
   flex: 1 1 0;
   min-width: 22px;
   border-radius: var(--r-sm) var(--r-sm) 4px 4px;
@@ -462,7 +462,7 @@ button.icon {
   align-items: flex-end;
   justify-content: center;
   color: var(--ink);
-  font-weight: 700;
+  font-weight: 650;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
   padding-bottom: 6px;
@@ -471,14 +471,14 @@ button.icon {
   box-shadow: none;
   will-change: height, transform;
   transition: height var(--t-mid) var(--ease),
-              background var(--t-fast) linear,
+              background-color var(--t-fast) linear,
               transform var(--t-fast) var(--ease);
 }
 
-.bar.compare { background: linear-gradient(180deg, var(--warn), var(--warn2)); transform: translateY(-4px); }
-.bar.swap    { background: linear-gradient(180deg, #ffb0a0, #ff8080); transform: translateY(-6px); }
-.bar.active  { background: linear-gradient(180deg, #a5f3d0, #7dd3fc); transform: translateY(-4px); }
-.bar.gap-highlight { background: linear-gradient(180deg, var(--warn), #f59e0b); }
+.bar.compare { background: var(--warn); color: #241a06; transform: translateY(-4px); }
+.bar.swap    { background: var(--danger); color: #2a0f0d; transform: translateY(-6px); }
+.bar.active  { background: var(--accent-hi); transform: translateY(-4px); }
+.bar.gap-highlight { background: var(--warn); color: #241a06; }
 
 /* ===================== Searching ===================== */
 
@@ -501,13 +501,13 @@ button.icon {
   background: var(--sunken);
   font-weight: 650;
   font-variant-numeric: tabular-nums;
-  transition: background var(--t-fast) var(--ease),
+  transition: background-color var(--t-fast) var(--ease),
               color var(--t-fast) var(--ease),
               transform var(--t-fast) var(--ease),
               border-color var(--t-fast) var(--ease);
 }
-.sbox.compare { background: linear-gradient(135deg, var(--warn), var(--warn2)); color: var(--ink); border-color: transparent; transform: translateY(-3px); }
-.sbox.match   { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--ink); border-color: transparent; transform: translateY(-3px) scale(1.05); }
+.sbox.compare { background: var(--warn); color: #241a06; border-color: transparent; transform: translateY(-3px); }
+.sbox.match   { background: var(--accent); color: var(--ink); border-color: transparent; transform: translateY(-3px); }
 
 /* ===================== String matching ===================== */
 
@@ -524,12 +524,12 @@ button.icon {
   border-radius: var(--r-sm);
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid transparent;
-  transition: background var(--t-fast) var(--ease),
+  transition: background-color var(--t-fast) var(--ease),
               color var(--t-fast) var(--ease),
               transform var(--t-fast) var(--ease);
 }
-.char.active { background: linear-gradient(135deg, var(--warn), var(--warn2)); color: var(--ink); transform: translateY(-3px); }
-.char.match  { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--ink); transform: translateY(-3px); }
+.char.active { background: var(--warn); color: #241a06; transform: translateY(-3px); }
+.char.match  { background: var(--accent); color: var(--ink); transform: translateY(-3px); }
 
 /* ===================== Greedy ===================== */
 
@@ -555,9 +555,9 @@ button.icon {
   justify-content: center;
   font-weight: 650;
   padding: 6px;
-  transition: transform var(--t-mid) var(--ease), box-shadow var(--t-mid) var(--ease);
+  transition: transform var(--t-mid) var(--ease);
 }
-.selectedActivity { box-shadow: 0 6px 18px rgba(125, 211, 252, 0.18); transform: scale(1.03); }
+.selectedActivity { transform: scale(1.03); }
 
 /* ===================== Graph ===================== */
 
@@ -588,8 +588,8 @@ button.icon {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   border-radius: var(--r-sm);
-  border: 1px solid var(--accent2);
-  background: #0c1426;
+  border: 1px solid var(--accent);
+  background: var(--sunken);
   color: var(--text);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), var(--ring);
   z-index: 5;
@@ -608,31 +608,32 @@ button.icon {
   gap: 6px;
   padding: 4px 6px 4px 9px;
   border-radius: var(--r-pill);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--line);
-  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
 }
-.node-chip:focus-within { border-color: var(--accent2); background: rgba(125, 211, 252, 0.1); }
+.node-chip:focus-within { border-color: var(--accent); background: var(--accent-quiet); }
 .node-chip .idx { font-size: 11px; color: var(--muted); font-weight: 650; }
 .node-chip input {
   width: 48px;
   padding: 3px 6px;
   border-radius: var(--r-sm);
   border: 1px solid transparent;
-  background: rgba(0, 0, 0, 0.28);
+  background: var(--sunken);
   text-align: center;
   font-size: 13px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
 }
-.node-chip input:focus-visible { box-shadow: none; border-color: var(--accent2); }
+.node-chip input:focus-visible { box-shadow: none; border-color: var(--accent); }
 
 .mst-total {
   padding: 10px var(--s4);
   border-radius: var(--r-md);
-  background: linear-gradient(135deg, var(--warn), var(--warn2));
-  color: var(--ink);
-  font-weight: 700;
+  background: var(--accent-quiet);
+  border: 1px solid var(--accent);
+  color: var(--accent-hi);
+  font-weight: 650;
   text-align: center;
   animation: panelIn var(--t-mid) var(--ease-out) both;
 }
@@ -646,7 +647,7 @@ button.icon {
 }
 .graph-step.added   { border-left-color: var(--accent); }
 .graph-step.skipped { border-left-color: var(--danger); }
-.graph-step.current { border-left-color: var(--warn); background: rgba(255, 208, 138, 0.1); }
+.graph-step.current { border-left-color: var(--warn); background: var(--warn-quiet); }
 
 /* ===================== Primes ===================== */
 
@@ -666,17 +667,16 @@ button.icon {
   font-weight: 650;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-  transition: background var(--t-fast) var(--ease),
+  transition: background-color var(--t-fast) var(--ease),
               color var(--t-fast) var(--ease),
-              transform var(--t-fast) var(--ease);
+              border-color var(--t-fast) var(--ease);
 }
 .numCell.prime {
-  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  background: var(--accent);
   color: var(--ink);
   border-color: transparent;
-  transform: scale(1.04);
 }
-.numCell.crossed { background: rgba(255, 255, 255, 0.02); color: #6b7593; text-decoration: line-through; }
+.numCell.crossed { background: transparent; color: #66636e; text-decoration: line-through; }
 
 /* Pascal preview */
 #pascalTri { display: flex; flex-direction: column; gap: var(--s1); }
@@ -690,8 +690,8 @@ button.icon {
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
-.pasCell.bad { background: #270f18; border-color: rgba(255, 86, 86, 0.35); color: #ffb3b3; }
-.pasCell.ok  { background: #0f1827; border-color: rgba(110, 231, 183, 0.3); color: #bff4e3; }
+.pasCell.bad { background: rgba(204, 107, 100, 0.12); border-color: var(--danger); color: #eda9a4; }
+.pasCell.ok  { background: var(--accent-quiet); border-color: var(--accent); color: var(--accent-hi); }
 
 /* ===================== Canvases (Huffman / trees) ===================== */
 
@@ -709,13 +709,13 @@ button.icon {
   gap: var(--s3);
   padding: var(--s2) var(--s3);
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.03);
+  background: transparent;
   border: 1px solid var(--line);
   font-size: 12.5px;
   color: var(--muted);
 }
 .zoom-controls #zoomLevel,
-.zoom-controls #treeZoomLevel { color: var(--accent); font-weight: 650; font-variant-numeric: tabular-nums; }
+.zoom-controls #treeZoomLevel { color: var(--accent-hi); font-weight: 650; font-variant-numeric: tabular-nums; }
 
 .tree-zoom-controls {
   display: flex;
@@ -754,7 +754,7 @@ button.icon {
 .huf-table .tabnums { font-variant-numeric: tabular-nums; }
 .huf-table .char-col { text-align: left; font-weight: 650; }
 .huf-table .freq-col { text-align: left; }
-.huf-table .code-col { text-align: left; letter-spacing: 0.5px; font-family: "JetBrains Mono", Consolas, monospace; }
+.huf-table .code-col { text-align: left; letter-spacing: 0.5px; font-family: "JetBrains Mono", Consolas, monospace; color: var(--accent-hi); }
 .huf-table .bits-col { text-align: center; }
 
 /* ===================== Converter / math ===================== */
@@ -778,7 +778,7 @@ button.icon {
 .math-operation {
   font-size: 18px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-hi);
   min-width: 30px;
   text-align: center;
 }
@@ -795,7 +795,7 @@ button.icon {
   flex: none;
   font-weight: 700;
   font-size: 15px;
-  color: var(--accent);
+  color: var(--accent-hi);
   min-width: 30px;
   text-align: center;
 }
