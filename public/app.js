@@ -63,9 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } catch (err) {
       console.error('Huffman request failed:', err);
-      if (!err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
-        alert(`Huffman error: ${err.message}`);
-      }
+      const box = $('hufVisBox');
+      if (box) box.textContent = `Huffman error: ${err.message}`;
     }
   });
 
@@ -78,7 +77,436 @@ document.addEventListener('DOMContentLoaded', () => {
 
 const $ = (id)=>document.getElementById(id);
 
+
 const API_BASE = '';
+const __nativeFetch = typeof window.fetch === 'function' ? window.fetch.bind(window) : null;
+
+function makeJsonResponse(payload, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async json() { return payload; },
+    async text() { return JSON.stringify(payload); }
+  };
+}
+
+function parseJsonBody(init) {
+  try {
+    return init && init.body ? JSON.parse(init.body) : {};
+  } catch {
+    return {};
+  }
+}
+
+function localSortOps(algo, inputArray) {
+  const arr = Array.isArray(inputArray) ? inputArray.slice() : [];
+  const ops = [];
+
+  function bubbleSort() {
+    for (let i = 0; i < arr.length; i++) {
+      for (let j = 0; j < arr.length - i - 1; j++) {
+        ops.push({ type: 'compare', i: j, j: j + 1 });
+        if (arr[j] > arr[j + 1]) {
+          [arr[j], arr[j + 1]] = [arr[j + 1], arr[j]];
+          ops.push({ type: 'swap', i: j, j: j + 1 });
+        }
+      }
+    }
+  }
+
+  function selectionSort() {
+    for (let i = 0; i < arr.length; i++) {
+      let minIdx = i;
+      for (let j = i + 1; j < arr.length; j++) {
+        ops.push({ type: 'compare', i: minIdx, j });
+        if (arr[j] < arr[minIdx]) minIdx = j;
+      }
+      if (minIdx !== i) {
+        [arr[i], arr[minIdx]] = [arr[minIdx], arr[i]];
+        ops.push({ type: 'swap', i, j: minIdx });
+      }
+    }
+  }
+
+  function insertionSort() {
+    for (let i = 1; i < arr.length; i++) {
+      const key = arr[i];
+      let j = i - 1;
+      while (j >= 0 && key < arr[j]) {
+        ops.push({ type: 'compare', i: j, j: j + 1 });
+        arr[j + 1] = arr[j];
+        ops.push({ type: 'set', i: j + 1, value: arr[j] });
+        j -= 1;
+      }
+      arr[j + 1] = key;
+      ops.push({ type: 'set', i: j + 1, value: key });
+    }
+  }
+
+  function mergeSort() {
+    function merge(left, right) {
+      const merged = [];
+      let i = 0, j = 0;
+      while (i < left.length && j < right.length) {
+        if (left[i] <= right[j]) merged.push(left[i++]);
+        else merged.push(right[j++]);
+      }
+      while (i < left.length) merged.push(left[i++]);
+      while (j < right.length) merged.push(right[j++]);
+      return merged;
+    }
+
+    function recurse(subArr, startIdx) {
+      if (subArr.length <= 1) return subArr;
+      const mid = Math.floor(subArr.length / 2);
+      const left = recurse(subArr.slice(0, mid), startIdx);
+      const right = recurse(subArr.slice(mid), startIdx + mid);
+      const merged = merge(left, right);
+      merged.forEach((val, idx) => ops.push({ type: 'set', i: startIdx + idx, value: val }));
+      return merged;
+    }
+
+    recurse(arr.slice(), 0);
+  }
+
+  function quickSort() {
+    function partition(low, high) {
+      const pivot = arr[high];
+      let i = low - 1;
+      for (let j = low; j < high; j++) {
+        ops.push({ type: 'compare', i: j, j: high });
+        if (arr[j] <= pivot) {
+          i += 1;
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+          if (i !== j) ops.push({ type: 'swap', i, j });
+        }
+      }
+      [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+      ops.push({ type: 'swap', i: i + 1, j: high });
+      return i + 1;
+    }
+
+    function recurse(low, high) {
+      if (low < high) {
+        const pi = partition(low, high);
+        recurse(low, pi - 1);
+        recurse(pi + 1, high);
+      }
+    }
+
+    recurse(0, arr.length - 1);
+  }
+
+  function shellSort() {
+    let gap = Math.floor(arr.length / 2);
+    ops.push({ type: 'gap_change', gap });
+    while (gap > 0) {
+      ops.push({ type: 'gap_change', gap });
+      for (let i = gap; i < arr.length; i++) {
+        const temp = arr[i];
+        let j = i;
+        while (j >= gap && arr[j - gap] > temp) {
+          ops.push({ type: 'compare', i: j - gap, j, gap });
+          arr[j] = arr[j - gap];
+          ops.push({ type: 'set', i: j, value: arr[j - gap], gap });
+          j -= gap;
+        }
+        if (j !== i) {
+          arr[j] = temp;
+          ops.push({ type: 'set', i: j, value: temp, gap });
+        } else if (j >= gap) {
+          ops.push({ type: 'compare', i: j - gap, j, gap });
+        }
+      }
+      gap = Math.floor(gap / 2);
+      if (gap > 0) ops.push({ type: 'gap_change', gap });
+    }
+  }
+
+  function countingSort() {
+    if (!arr.length) return;
+    const maxVal = Math.max(...arr);
+    const minVal = Math.min(...arr);
+    const count = new Array(maxVal - minVal + 1).fill(0);
+    arr.forEach(num => count[num - minVal] += 1);
+    const output = [];
+    count.forEach((cnt, idx) => { for (let k = 0; k < cnt; k++) output.push(idx + minVal); });
+    output.forEach((val, idx) => ops.push({ type: 'set', i: idx, value: val }));
+  }
+
+  function radixSort() {
+    if (!arr.length) return;
+    let maxVal = Math.max(...arr);
+    let exp = 1;
+    while (Math.floor(maxVal / exp) > 0) {
+      const output = new Array(arr.length).fill(0);
+      const count = new Array(10).fill(0);
+      arr.forEach(num => count[Math.floor(num / exp) % 10] += 1);
+      for (let i = 1; i < 10; i++) count[i] += count[i - 1];
+      for (let i = arr.length - 1; i >= 0; i--) {
+        const digit = Math.floor(arr[i] / exp) % 10;
+        output[count[digit] - 1] = arr[i];
+        count[digit] -= 1;
+      }
+      for (let i = 0; i < arr.length; i++) {
+        if (arr[i] !== output[i]) {
+          arr[i] = output[i];
+          ops.push({ type: 'set', i, value: output[i] });
+        }
+      }
+      exp *= 10;
+    }
+  }
+
+  function bucketSort() {
+    if (!arr.length) return;
+    const maxVal = Math.max(...arr);
+    const minVal = Math.min(...arr);
+    const bucketCount = arr.length;
+    const buckets = Array.from({ length: bucketCount }, () => []);
+    arr.forEach(num => {
+      const index = Math.floor(((num - minVal) / (maxVal - minVal + 1)) * bucketCount);
+      buckets[index].push(num);
+    });
+    buckets.forEach(bucket => bucket.sort((a, b) => a - b));
+    const output = buckets.flat();
+    output.forEach((val, idx) => ops.push({ type: 'set', i: idx, value: val }));
+  }
+
+  function combSort() {
+    let gap = arr.length;
+    const shrink = 1.3;
+    let sorted = false;
+    while (!sorted) {
+      gap = Math.floor(gap / shrink);
+      if (gap <= 1) {
+        gap = 1;
+        sorted = true;
+      }
+      for (let i = 0; i < arr.length - gap; i++) {
+        ops.push({ type: 'compare', i, j: i + gap, gap });
+        if (arr[i] > arr[i + gap]) {
+          [arr[i], arr[i + gap]] = [arr[i + gap], arr[i]];
+          ops.push({ type: 'swap', i, j: i + gap, gap });
+          sorted = false;
+        }
+      }
+    }
+  }
+
+  function timSort() {
+    const sortedArr = arr.slice().sort((a, b) => a - b);
+    sortedArr.forEach((val, idx) => {
+      if (arr[idx] !== val) ops.push({ type: 'set', i: idx, value: val });
+    });
+  }
+
+  const algos = {
+    bubble: bubbleSort,
+    selection: selectionSort,
+    insertion: insertionSort,
+    merge: mergeSort,
+    quick: quickSort,
+    shell: shellSort,
+    counting: countingSort,
+    radix: radixSort,
+    bucket: bucketSort,
+    comb: combSort,
+    tim: timSort
+  };
+
+  if (!algos[algo]) throw new Error(`Unknown algorithm: ${algo}`);
+  algos[algo]();
+  return ops;
+}
+
+function gcdLocal(a, b) {
+  let x = Math.abs(a), y = Math.abs(b);
+  while (y) [x, y] = [y, x % y];
+  return x;
+}
+
+function buildHuffmanLocal(text) {
+  const freq = {};
+  for (const ch of text) freq[ch] = (freq[ch] || 0) + 1;
+  const heap = Object.entries(freq).map(([sym, count], idx) => ({ freq: count, sym, order: idx, left: null, right: null }));
+  const steps = [`Initial frequencies: ${JSON.stringify(freq)}`];
+  let order = heap.length;
+
+  function heapSortLike() {
+    heap.sort((a, b) => a.freq - b.freq || a.order - b.order);
+  }
+
+  heapSortLike();
+  while (heap.length > 1) {
+    const left = heap.shift();
+    const right = heap.shift();
+    const node = { freq: left.freq + right.freq, sym: null, left, right, order: order++ };
+    steps.push(`Merged '${left.sym ?? 'internal'}'(${left.freq}) and '${right.sym ?? 'internal'}'(${right.freq}) -> internal(${node.freq})`);
+    heap.push(node);
+    heapSortLike();
+  }
+
+  const root = heap[0] || null;
+  const codes = {};
+  function visit(node, code = '') {
+    if (!node) return;
+    if (node.sym !== null) {
+      codes[node.sym] = code || '0';
+      return;
+    }
+    visit(node.left, code + '0');
+    visit(node.right, code + '1');
+  }
+  visit(root);
+
+  function toStruct(node) {
+    if (!node) return null;
+    return { freq: node.freq, sym: node.sym, left: toStruct(node.left), right: toStruct(node.right) };
+  }
+
+  return { codes, struct: toStruct(root), steps };
+}
+
+function localApiResponse(path, body) {
+  if (path === '/api/sort') {
+    return { ops: localSortOps(body.algo, body.array || []) };
+  }
+
+  if (path === '/api/greedy/activity') {
+    const activities = String(body.activities || '')
+      .split(';')
+      .map(pair => pair.trim())
+      .filter(Boolean)
+      .map(pair => {
+        const [start, end] = pair.split(',').map(v => Number(v.trim()));
+        if (Number.isNaN(start) || Number.isNaN(end)) throw new Error('Invalid activity list');
+        return [start, end];
+      })
+      .sort((a, b) => a[1] - b[1]);
+
+    const selected = [];
+    const steps = [];
+    let lastEnd = -1;
+    activities.forEach(([start, end]) => {
+      if (start >= lastEnd) {
+        selected.push(`(${start},${end})`);
+        steps.push(`Select activity (${start},${end}) - starts after previous ends`);
+        lastEnd = end;
+      } else {
+        steps.push(`Skip activity (${start},${end}) - overlaps with previous`);
+      }
+    });
+    return { selected, count: selected.length, steps };
+  }
+
+  if (path === '/api/greedy/knapsack') {
+    const capacity = Number(body.capacity || 0);
+    const items = String(body.items || '')
+      .split(';')
+      .map(pair => pair.trim())
+      .filter(Boolean)
+      .map(pair => {
+        const [weight, value] = pair.split(',').map(v => Number(v.trim()));
+        if (!weight || Number.isNaN(weight) || Number.isNaN(value)) throw new Error('Invalid item list');
+        return { weight, value, ratio: value / weight };
+      })
+      .sort((a, b) => b.ratio - a.ratio);
+
+    let currentWeight = 0;
+    let totalValue = 0;
+    const selectedItems = [];
+    const steps = [];
+
+    items.forEach((item, idx) => {
+      if (currentWeight + item.weight <= capacity) {
+        selectedItems.push(`Item${idx + 1}(w:${item.weight},v:${item.value})`);
+        currentWeight += item.weight;
+        totalValue += item.value;
+        steps.push(`Take Item${idx + 1} - weight:${item.weight}, value:${item.value}, ratio:${item.ratio.toFixed(2)}`);
+      } else {
+        steps.push(`Skip Item${idx + 1} - would exceed capacity`);
+      }
+    });
+
+    return { maxValue: totalValue, selectedItems, steps };
+  }
+
+  if (path === '/api/greedy/egyptian') {
+    let nr = Number(body.numerator || 0);
+    let dr = Number(body.denominator || 1);
+    if (!dr) throw new Error('Denominator cannot be zero');
+    const fractions = [];
+    const steps = [];
+    while (nr !== 0) {
+      const x = Math.floor((dr + nr - 1) / nr);
+      fractions.push(`1/${x}`);
+      steps.push(`${nr}/${dr} = 1/${x} + remainder`);
+      nr = nr * x - dr;
+      dr = dr * x;
+      const g = gcdLocal(nr, dr);
+      if (g > 1) {
+        nr /= g;
+        dr /= g;
+        steps.push(`Simplify to ${nr}/${dr}`);
+      }
+    }
+    return { fractions, steps };
+  }
+
+  if (path === '/api/greedy/job-sequencing') {
+    const jobs = String(body.jobs || '')
+      .split(';')
+      .map(item => item.trim())
+      .filter(Boolean)
+      .map(item => {
+        const [id, deadline, profit] = item.split(',');
+        return { id: String(id).trim(), deadline: Number(deadline), profit: Number(profit) };
+      })
+      .sort((a, b) => b.profit - a.profit);
+
+    const maxDeadline = jobs.reduce((m, job) => Math.max(m, job.deadline || 0), 0);
+    const timeline = new Array(maxDeadline + 1).fill(null);
+    const sequence = [];
+    const steps = [];
+    let maxProfit = 0;
+
+    jobs.forEach(job => {
+      let placed = false;
+      for (let t = job.deadline; t > 0; t--) {
+        if (!timeline[t]) {
+          timeline[t] = job;
+          sequence.push(job.id);
+          maxProfit += job.profit;
+          steps.push(`Schedule job ${job.id} at time ${t} (profit: ${job.profit})`);
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) steps.push(`Cannot schedule job ${job.id} - no available slot`);
+    });
+
+    return { maxProfit, sequence, steps };
+  }
+
+  if (path === '/api/greedy/huffman') {
+    return buildHuffmanLocal(String(body.pairs || ''));
+  }
+
+  return null;
+}
+
+window.fetch = async function(input, init = {}) {
+  const url = typeof input === 'string' ? input : String(input && input.url ? input.url : '');
+  if (url.startsWith('/api/')) {
+    const body = parseJsonBody(init);
+    const local = localApiResponse(url, body);
+    if (local) return makeJsonResponse(local, 200);
+  }
+  if (!__nativeFetch) throw new Error('Fetch is not available');
+  return __nativeFetch(input, init);
+};
+
 async function apiPost(path, body) {
   try {
     const res = await fetch((API_BASE + path), {
@@ -95,19 +523,12 @@ async function apiPost(path, body) {
     console.error('API error:', err);
 
     if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
-      const msg = `Cannot reach the Python backend.\nIf you're opening index.html directly (file://), please run: python server.py\nThen open http://localhost:8000 in your browser.`;
-      alert(msg);
+      err.message = 'Cannot reach the Python backend. Run "python server.py" and open http://localhost:8000';
     }
     throw err;
   }
 }
 
-if (location.protocol === 'file:') {
-  console.warn('Running from file:// — backend calls will fail.');
-  setTimeout(()=>{
-    alert('You opened index.html directly.\nTo enable Start buttons, run the backend:\n\n1) Open a terminal in this folder\n2) Run: python server.py\n3) Visit: http://localhost:8000');
-  }, 100);
-}
 
 const sections = {
   sort: { settings: 'sortSettings', vis: 'sortVis' },
@@ -142,14 +563,25 @@ $('sortSettings').classList.add('visible');
 $('sortVis').style.display = 'flex';
 
 function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+/* Append one line to a step log. Appending a node keeps long runs cheap and
+   leaves any < or > in the text alone. */
+function logLine(el, text){
+  if (!el) return;
+  const line = document.createElement('div');
+  line.textContent = text === '' ? '\u00a0' : String(text);
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
 let delay = 250;
 const speedPill = $('speedPill');
-if (speedPill) speedPill.textContent = 'Speed: 250ms';
 const delayInput = $('delayInput');
+if (delayInput) delay = Number(delayInput.value) || delay;
+if (speedPill) speedPill.textContent = `${delay} ms`;
 if (delayInput) {
   delayInput.addEventListener('input', (e)=>{
     delay = Number(e.target.value) || 250;
-    if (speedPill) speedPill.textContent = `Speed: ${delay}ms`;
+    if (speedPill) speedPill.textContent = `${delay} ms`;
   });
 }
 
@@ -393,6 +825,37 @@ async function runMathOperation() {
   }
 }
 
+async function runModuloOperation() {
+  const base = Number($('moduloBase').value);
+  const num1 = $('moduloNum1').value.trim();
+  const num2 = $('moduloNum2').value.trim();
+  const outputBox = $('converterOutput');
+  const stepsBox = $('mathStepsBox');
+
+  if (!num1 || !num2) {
+    if (outputBox) outputBox.textContent = 'Please enter both numbers.';
+    return;
+  }
+
+  if (num1.includes('.') || num2.includes('.')) {
+    if (outputBox) outputBox.textContent = 'Modulo accepts whole numbers only.';
+    return;
+  }
+
+  if (!isValidFloatingPointNumber(num1, base) || !isValidFloatingPointNumber(num2, base)) {
+    if (outputBox) outputBox.textContent = `Invalid number for base ${base}.`;
+    return;
+  }
+
+  try {
+    const res = await apiPost('/api/math', { operation: 'modulo', num1, num2, base });
+    displayMathResult(res, 'modulo', outputBox, stepsBox);
+  } catch (err) {
+    if (outputBox) outputBox.textContent = 'Error performing the modulo operation.';
+    console.error(err);
+  }
+}
+
 function isValidFloatingPointNumber(num, base) {
   const validChars = {
     2: /^[01]*\.?[01]*$/,
@@ -422,8 +885,10 @@ function displayMathResult(res, operation, outputBox, stepsBox) {
 
   if (outputBox) outputBox.textContent = resultText;
 
-  if (stepsBox && res.steps) {
-    let stepsHTML = '<strong>Calculation Steps:</strong><br>';
+  const stepsBody = $('mathStepsContent') || stepsBox;
+  if (stepsBox) stepsBox.style.display = 'block';
+  if (stepsBody && res.steps) {
+    let stepsHTML = '';
 
     if (operation === 'add') {
       stepsHTML += formatAdditionSteps(res.steps);
@@ -436,93 +901,40 @@ function displayMathResult(res, operation, outputBox, stepsBox) {
     } else if (operation === 'modulo') {
       stepsHTML += formatModuloSteps(res.steps);
     } else {
-      stepsHTML += res.steps.map(step => `• ${step}`).join('<br>');
+      stepsHTML += formatSteps(res.steps);
     }
 
-    stepsBox.innerHTML = stepsHTML;
+    stepsBody.innerHTML = stepsHTML;
   }
 }
 
-function formatAdditionSteps(steps) {
-  return steps.map(step => {
-    if (step.includes('Carry:')) {
-      return `<span style="color: #f59e0b">${step}</span>`;
-    } else if (step.includes('Result digit:')) {
-      return `<span style="color: #10b981">${step}</span>`;
-    } else if (step.includes('Final result')) {
-      return `<span style="color: #ffffffff; font-weight: bold">${step}</span>`;
-    } else if (step.includes('Converted')) {
-      return `<span style="color: #6b7280">📥 ${step}</span>`;
-    }
-    return `• ${step}`;
+/* One formatter for every arithmetic mode so that the step lists in each
+   category look and read the same way. Plain text, no pictograms. */
+const STEP_TONES = [
+  { keys: ['Final result', 'Final quotient', 'Final remainder'], color: '#e8eefc', bold: true },
+  { keys: ['Carry:', 'Borrow:', 'Remainder:', 'Summing partial products'], color: '#ffd08a' },
+  { keys: ['Result digit:', 'Quotient:'], color: '#6ee7b7' },
+  { keys: ['Partial product:'], color: '#c4b5fd' },
+  { keys: ['Borrow 1 from next column'], color: '#ff9d9d' },
+  { keys: ['Converted', 'Bring down', 'Multiply by'], color: '#929dbb' },
+  { keys: ['Step '], color: '#7dd3fc' }
+];
+
+function formatSteps(steps) {
+  return (steps || []).map(step => {
+    const text = String(step);
+    const tone = STEP_TONES.find(t => t.keys.some(k => text.includes(k)));
+    const color = tone ? tone.color : '#c8d2ea';
+    const weight = tone && tone.bold ? ';font-weight:650' : '';
+    return `<span style="color:${color}${weight}">• ${text}</span>`;
   }).join('<br>');
 }
 
-function formatSubtractionSteps(steps) {
-  return steps.map(step => {
-    if (step.includes('Borrow:')) {
-      return `<span style="color: #f59e0b">${step}</span>`;
-    } else if (step.includes('Result digit:')) {
-      return `<span style="color: #10b981">${step}</span>`;
-    } else if (step.includes('Borrow 1 from next column')) {
-      return `<span style="color: #ef4444">${step}</span>`;
-    } else if (step.includes('Final result')) {
-      return `<span style="color: #ffffffff; font-weight: bold">${step}</span>`;
-    }
-    return `• ${step}`;
-  }).join('<br>');
-}
-
-function formatMultiplicationSteps(steps) {
-  return steps.map(step => {
-    if (step.includes('Partial product:')) {
-      return `<span style="color: #8b5cf6">📦 ${step}</span>`;
-    } else if (step.includes('Summing partial products')) {
-      return `<span style="color: #f59e0b">∑ ${step}</span>`;
-    } else if (step.includes('Final result')) {
-      return `<span style="color: #10b981; font-weight: bold">${step}</span>`;
-    } else if (step.includes('Multiply by')) {
-      return `<span style="color: #ffffffff">${step}</span>`;
-    }
-    return `• ${step}`;
-  }).join('<br>');
-}
-
-function formatDivisionSteps(steps) {
-  return steps.map(step => {
-    if (step.includes('Quotient:')) {
-      return `<span style="color: #10b981">${step}</span>`;
-    } else if (step.includes('Remainder:')) {
-      return `<span style="color: #f59e0b">${step}</span>`;
-    } else if (step.includes('Bring down')) {
-      return `<span style="color: #ffffffff">${step}</span>`;
-    } else if (step.includes('Final quotient')) {
-      return `<span style="color: #10b981; font-weight: bold">${step}</span>`;
-    } else if (step.includes('Final remainder')) {
-      return `<span style="color: #f59e0b; font-weight: bold">${step}</span>`;
-    }
-    return `• ${step}`;
-  }).join('<br>');
-}
-
-function formatModuloSteps(steps) {
-  return steps.map(step => {
-    if (step.includes('Step 1:')) {
-      return `<span style="color: #f4f8ffff">${step}</span>`;
-    } else if (step.includes('Step 2:')) {
-      return `<span style="color: #8b5cf6">${step}</span>`;
-    } else if (step.includes('Step 3:')) {
-      return `<span style="color: #f59e0b">${step}</span>`;
-    } else if (step.includes('Step 4:')) {
-      return `<span style="color: #ef4444">${step}</span>`;
-    } else if (step.includes('Step 5:')) {
-      return `<span style="color: #10b981; font-weight: bold">⑤ ${step}</span>`;
-    } else if (step.includes('Modulo Operation')) {
-      return `<span style="color: #000; font-weight: bold">${step}</span>`;
-    }
-    return `• ${step}`;
-  }).join('<br>');
-}
+const formatAdditionSteps = formatSteps;
+const formatSubtractionSteps = formatSteps;
+const formatMultiplicationSteps = formatSteps;
+const formatDivisionSteps = formatSteps;
+const formatModuloSteps = formatSteps;
 
 let huffmanZoom = 1.0;
 let treeZoom = 1.0;
@@ -634,13 +1046,10 @@ function setupTreeZoom() {
     const zoomControls = document.createElement('div');
     zoomControls.id = 'treeZoomControls';
     zoomControls.className = 'zoom-controls';
-    zoomControls.style.cssText = 'margin-bottom:10px; display:flex; gap:10px; align-items:center;';
     zoomControls.innerHTML = `
-      <span style="color: var(--muted); font-size: 13px;">Zoom Level:</span>
+      <span>Zoom</span>
       <span id="treeZoomLevel">100%</span>
-      <span style="color: var(--muted); font-size: 12px; margin-left: auto;">
-        (Scroll to zoom • Drag to pan • Double-click to reset)
-      </span>
+      <span style="margin-left:auto">Scroll to zoom, drag to pan, double-click to reset</span>
     `;
     treeCanvasWrap.parentNode.insertBefore(zoomControls, treeCanvasWrap);
   }
@@ -735,7 +1144,7 @@ function setupTreeZoom() {
 
 const searchResultBox = $('searchResult');
 const searchLog = $('searchLog');
-function sLog(line){ if (searchLog){ searchLog.textContent += (searchLog.textContent? '\n':'') + line; searchLog.scrollTop = searchLog.scrollHeight; } }
+function sLog(line){ logLine(searchLog, line); }
 function clearS(){ if (searchLog) searchLog.textContent=''; if (searchResultBox) searchResultBox.innerText='Status: idle'; }
 
 function buildSearchBoxes(arr){
@@ -1246,7 +1655,7 @@ $('searchStartBtn')?.addEventListener('click', async ()=>{
   const algo = $('searchAlgo').value;
   const arr = $('searchArray').value.split(',').map(s=>Number(s.trim())).filter(n=>!isNaN(n));
   const target = Number($('searchTarget').value);
-  if (!arr.length) { alert('Enter array for searching.'); return; }
+  if (!arr.length) { if (searchResultBox) searchResultBox.innerText = 'Enter an array to search.'; return; }
   if (algo==='linear') await linearSearch(arr, target);
   else if (algo==='binary') await binarySearch(arr, target);
   else if (algo==='jump') await jumpSearch(arr, target);
@@ -1273,11 +1682,7 @@ $('searchResetBtn')?.addEventListener('click', ()=>{ clearS(); });
 
 const sortLog = $('sortLog');
 function clearSortLog(){ if (sortLog) sortLog.textContent=''; }
-function addSortStep(msg){ 
-  if (!sortLog) return; 
-  sortLog.innerHTML += (sortLog.innerHTML?'<br>':'') + msg; 
-  sortLog.scrollTop = sortLog.scrollHeight; 
-}
+function addSortStep(msg){ logLine(sortLog, msg); }
 let stepCounter=0;
 const stepCountLabel = $('stepCount');
 function resetSortSteps(){ stepCounter=0; if (stepCountLabel) stepCountLabel.innerText='0'; clearSortLog(); }
@@ -1286,7 +1691,10 @@ function incSortStep(){ stepCounter++; if (stepCountLabel) stepCountLabel.innerT
 function toggleBarsForAlgo(algo){
   const hide = (algo==='heap' || algo==='tree' || algo==='tournament');
   const ba = $('barsArea');
-  if (ba) ba.style.display = hide ? 'none' : 'flex';
+  if (!ba) return;
+  ba.style.display = hide ? 'none' : 'flex';
+  const stage = ba.closest('.stage');
+  if (stage) stage.style.display = hide ? 'none' : 'block';
 }
 const barsArea = $('barsArea');
 const curSortAlgoLabel = $('curSortAlgo');
@@ -1325,6 +1733,7 @@ function buildBars(arr) {
 }
 function readBars(){ return Array.from(barsArea?.children || []).map(b => Number(b.dataset.val)); }
 
+
 const sortRandBtn = $('sortRandBtn');
 if (sortRandBtn) sortRandBtn.addEventListener('click', ()=>{
   const text = $('sortArray');
@@ -1340,7 +1749,7 @@ const sortStartBtn = $('sortStartBtn');
 if (sortStartBtn) sortStartBtn.addEventListener('click', async ()=>{
   const algo = $('sortAlgo').value;
   const arr = $('sortArray').value.split(',').map(s=>Number(s.trim())).filter(n=>!isNaN(n));
-  if (!arr.length) { alert('Enter numbers for sorting'); return; }
+  if (!arr.length) { addSortStep('Enter numbers to sort.'); return; }
   curSortAlgoLabel.innerText = algo;
   resetSortSteps();
   toggleBarsForAlgo(algo);
@@ -1827,7 +2236,7 @@ function drawBSTFromArray(arr){
 const textBox = $('textBox');
 const stringResultBox = $('stringResult');
 const stringLog = $('stringLog');
-function strLog(line){ if (stringLog){ stringLog.textContent += (stringLog.textContent? '\n':'') + line; stringLog.scrollTop = stringLog.scrollHeight; } }
+function strLog(line){ logLine(stringLog, line); }
 function buildTextBox(text){
   if (!textBox) return;
   textBox.innerHTML='';
@@ -2033,7 +2442,7 @@ async function runBM(text, pat){
 }
 $('stringStartBtn')?.addEventListener('click', async ()=>{
   const algo = $('stringAlgo').value; const text = $('textInput').value; const pattern = $('patternInput').value;
-  if (!text || !pattern) { alert('Enter both text and pattern'); return; }
+  if (!text || !pattern) { if (stringResultBox) stringResultBox.innerText = 'Enter both a text and a pattern.'; return; }
   buildTextBox(text); stringLog.textContent=''; stringResultBox.innerText='Running...';
   if (algo==='naive') await runNaive(text, pattern);
   else if (algo==='kmp') await runKMP(text, pattern);
@@ -2044,19 +2453,22 @@ $('stringStartBtn')?.addEventListener('click', async ()=>{
 $('stringResetBtn')?.addEventListener('click', ()=>{ buildTextBox(''); stringResultBox.innerText='Status: idle'; if (stringLog) stringLog.textContent=''; });
 
 const greedyAlgoSel = $('greedyAlgo');
+function syncGreedyPanels(showOutput = true) {
+  if (!greedyAlgoSel) return;
+  const panels = ['g-activity','g-knapsack','g-egypt','g-jobseq','g-huffman'];
+  const vis = ['g-activity-vis','g-knap-vis','g-egypt-vis','g-job-vis','g-huf-vis'];
+  panels.forEach(id=>{ const el=$(id); if (el) el.style.display='none'; });
+  vis.forEach(id=>{ const el=$(id); if (el) el.style.display='none'; });
+  const v = greedyAlgoSel.value;
+  if (v==='activity'){ $('g-activity').style.display='block'; $('g-activity-vis').style.display='block'; }
+  if (v==='knapsack'){ $('g-knapsack').style.display='block'; $('g-knap-vis').style.display='block'; }
+  if (v==='egypt'){ $('g-egypt').style.display='block'; $('g-egypt-vis').style.display='block'; }
+  if (v==='jobseq'){ $('g-jobseq').style.display='block'; $('g-job-vis').style.display='block'; }
+  if (v==='huffman'){ $('g-huffman').style.display='block'; $('g-huf-vis').style.display='block'; }
+}
 if (greedyAlgoSel) {
-  greedyAlgoSel.addEventListener('change', ()=>{
-    const panels = ['g-activity','g-knapsack','g-egypt','g-jobseq','g-huffman'];
-    const vis = ['g-activity-vis','g-knap-vis','g-egypt-vis','g-job-vis','g-huf-vis'];
-    panels.forEach(id=>{ const el=$(id); if (el) el.style.display='none'; });
-    vis.forEach(id=>{ const el=$(id); if (el) el.style.display='none'; });
-    const v=greedyAlgoSel.value;
-    if (v==='activity'){ $('g-activity').style.display='block'; $('g-activity-vis').style.display='block'; }
-    if (v==='knapsack'){ $('g-knapsack').style.display='block'; $('g-knap-vis').style.display='block'; }
-    if (v==='egypt'){ $('g-egypt').style.display='block'; $('g-egypt-vis').style.display='block'; }
-    if (v==='jobseq'){ $('g-jobseq').style.display='block'; $('g-job-vis').style.display='block'; }
-    if (v==='huffman'){ $('g-huffman').style.display='block'; $('g-huf-vis').style.display='block'; }
-  });
+  greedyAlgoSel.addEventListener('change', ()=> syncGreedyPanels());
+  syncGreedyPanels();
 }
 
 const convModeSel = $('convMode');
@@ -2071,11 +2483,14 @@ if (convModeSel) convModeSel.addEventListener('change', ()=>{
     bin2others: {ph:'e.g., 101101',  label:'Enter binary value'},
     oct2others: {ph:'e.g., 173',     label:'Enter octal value'},
     hex2others: {ph:'e.g., 7B',      label:'Enter hex value'},
-    math: {ph:'', label:'Mathematical Operations'}
+    math: {ph:'', label:'Arithmetic operation'},
+    modulo: {ph:'', label:'Modulo operation'}
   };
   const cfg = map[m] || map.dec2others;
   $('convInputLabel').innerText = cfg.label;
   convInput.placeholder = cfg.ph;
+  const runBtn = $('convRunBtn');
+  if (runBtn) runBtn.textContent = (m === 'math' || m === 'modulo') ? 'Calculate' : 'Convert';
 });
 
 const convRunBtn = $('convRunBtn');
@@ -2085,6 +2500,8 @@ if (convRunBtn) {
 
     if (mode === 'math') {
       await runMathOperation();
+    } else if (mode === 'modulo') {
+      await runModuloOperation();
     } else {
       runRegularConversion();
     }
@@ -2179,414 +2596,987 @@ function convertFromDecimalWithSteps(n, base){
 
 function labelForBase(b){ return b===2?'Bin':b===8?'Oct':b===10?'Dec':'Hex'; }
 
-function gLog(line){ const el=$('graphSteps'); if (el){ el.textContent += (el.textContent?'\n':'') + line; el.scrollTop = el.scrollHeight; } }
-const canvas = $('graphCanvas');
-const ctx = canvas ? canvas.getContext('2d') : null;
-let gNodes=[], gEdges=[], gMST=[];
-$('genGraphBtn')?.addEventListener('click', ()=>generateGraph());
+/* ============================================================
+   GRAPH ALGORITHMS
+   Nodes carry an editable value, edges carry an editable weight.
+   Everything is painted on one requestAnimationFrame loop so
+   positions and highlights ease instead of snapping.
+   ============================================================ */
 
-function generateGraph(){
-  if (!canvas || !ctx) return;
-  const n=Math.max(2, Number($('nodeCount').value));
-  const density=Math.max(1, Math.min(100, Number($('edgeDensity').value)));
-  gNodes=[]; gEdges=[];
-  const cx=canvas.width/2, cy=canvas.height/2, r=Math.min(cx,cy)-80;
-  for (let i=0;i<n;i++){ const ang=(i/n)*Math.PI*2 - Math.PI/2; gNodes.push({id:i,x:cx+Math.cos(ang)*r,y:cy+Math.sin(ang)*r}); }
-  const possible=[]; for (let i=0;i<n;i++){ for (let j=i+1;j<n;j++) possible.push([i,j]); }
-  possible.forEach(p=>{ if (Math.random()*100<density) gEdges.push({u:p[0], v:p[1], w:Math.floor(Math.random()*20)+1}); });
-  if (gEdges.length===0){ for (let i=1;i<n;i++) gEdges.push({u:i-1, v:i, w:Math.floor(Math.random()*20)+1}); }
-  gMST=[]; drawGraph(); $('graphResult').innerText = `Generated ${n} nodes, ${gEdges.length} edges.`; const gs=$('graphSteps'); if (gs){ gs.textContent = `Generated ${n} nodes, ${gEdges.length} edges.`; }
+const graphCanvas = $('graphCanvas');
+const gctx = graphCanvas ? graphCanvas.getContext('2d') : null;
+const graphStage = $('graphStage');
+
+const MIN_NODES = 2;
+const MAX_NODES = 26;
+
+let gNodes = [], gEdges = [], gMST = [];
+let gRunId = 0;                       // bumping this cancels the running algorithm
+let gDelay = 600;                     // ms between algorithm steps
+let gView = { w: 780, h: 460 };
+let gHoverNode = -1, gHoverEdge = -1, gDragNode = -1, gFocusNode = -1;
+let gActiveNodes = new Set();
+let gRaf = null, gEditor = null;
+
+const G_EDGE_IDLE   = { r: 255, g: 255, b: 255, a: 0.10, w: 1.6 };
+const G_EDGE_TREE   = { r: 110, g: 231, b: 183, a: 0.95, w: 3.2 };
+const G_EDGE_ACTIVE = { r: 255, g: 208, b: 138, a: 0.95, w: 3.6 };
+
+function gClamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+function gLog(line){ logLine($('graphSteps'), line); }
+
+function gClearLog(text){
+  const el = $('graphSteps');
+  if (!el) return;
+  el.textContent = '';
+  if (text) String(text).split('\n').forEach(line => logLine(el, line));
 }
 
-function drawGraph(highlights=new Set(), edgeColors={}){
-  if (!ctx || !canvas) return;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  for (let idx=0; idx<gEdges.length; idx++){
-    const e=gEdges[idx], a=gNodes[e.u], b=gNodes[e.v];
-    ctx.beginPath(); ctx.lineWidth=2;
-    ctx.strokeStyle = highlights.has(idx) ? (edgeColors[idx] || 'rgba(110,231,183,0.95)') : 'rgba(255,255,255,0.06)';
-    ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.stroke();
-    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2; ctx.fillStyle='rgba(255,255,255,0.12)'; ctx.font='12px Arial'; ctx.fillText(e.w, mx+6, my+6);
+/* value shown inside a node - this is what the user edits */
+function nl(i){
+  const n = gNodes[i];
+  return n === undefined ? String(i) : String(n.label);
+}
+
+function gNodeR(){
+  const n = gNodes.length;
+  return n > 18 ? 15 : n > 12 ? 17 : n > 8 ? 19 : 21;
+}
+
+function makeNode(i){
+  return { id: i, label: i, x: gView.w / 2, y: gView.h / 2, tx: gView.w / 2, ty: gView.h / 2, glow: 0, tGlow: 0 };
+}
+
+function makeEdge(u, v, w){
+  return {
+    u, v,
+    w: w === undefined ? Math.floor(Math.random() * 20) + 1 : w,
+    state: 'idle',
+    cur: { ...G_EDGE_IDLE },
+    tgt: { ...G_EDGE_IDLE }
+  };
+}
+
+/* ---------------------------- canvas plumbing ---------------------------- */
+
+function sizeGraphCanvas(){
+  if (!graphCanvas || !gctx) return false;
+  const rect = graphCanvas.getBoundingClientRect();
+  if (rect.width < 10) return false;               // panel still hidden
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.round(rect.width), h = Math.round(rect.height);
+  const pw = Math.round(w * dpr), ph = Math.round(h * dpr);
+  if (graphCanvas.width !== pw || graphCanvas.height !== ph){
+    graphCanvas.width = pw;
+    graphCanvas.height = ph;
   }
+  gctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  gView = { w, h };
+  return true;
+}
+
+function layoutGraph(animate = true){
+  const n = gNodes.length;
+  if (!n) return;
+  const cx = gView.w / 2, cy = gView.h / 2;
+  const r = Math.max(70, Math.min(cx, cy) - gNodeR() - 34);
+  gNodes.forEach((node, i) => {
+    const ang = (i / n) * Math.PI * 2 - Math.PI / 2;
+    node.tx = cx + Math.cos(ang) * r;
+    node.ty = cy + Math.sin(ang) * r;
+    if (!animate){ node.x = node.tx; node.y = node.ty; }
+  });
+  requestGraphFrame();
+}
+
+function requestGraphFrame(){
+  if (gRaf !== null) return;
+  gRaf = requestAnimationFrame(graphTick);
+}
+
+function easeToward(cur, tgt, k){
+  let moving = false;
+  for (const key in tgt){
+    const d = tgt[key] - cur[key];
+    if (Math.abs(d) > 0.004){ cur[key] += d * k; moving = true; }
+    else cur[key] = tgt[key];
+  }
+  return moving;
+}
+
+function graphTick(){
+  gRaf = null;
+  let moving = false;
+
+  gNodes.forEach((n, i) => {
+    n.tGlow = (i === gDragNode || i === gHoverNode || i === gFocusNode || gActiveNodes.has(i)) ? 1 : 0;
+    if (i !== gDragNode){
+      const dx = n.tx - n.x, dy = n.ty - n.y;
+      if (Math.abs(dx) > 0.25 || Math.abs(dy) > 0.25){ n.x += dx * 0.18; n.y += dy * 0.18; moving = true; }
+      else { n.x = n.tx; n.y = n.ty; }
+    }
+    const dg = n.tGlow - n.glow;
+    if (Math.abs(dg) > 0.005){ n.glow += dg * 0.2; moving = true; }
+    else n.glow = n.tGlow;
+  });
+
+  gEdges.forEach(e => { if (easeToward(e.cur, e.tgt, 0.2)) moving = true; });
+
+  paintGraph();
+  if (moving) requestGraphFrame();
+}
+
+function edgeMid(e){
+  const a = gNodes[e.u], b = gNodes[e.v];
+  if (!a || !b) return null;
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+}
+
+function roundRect(c, x, y, w, h, r){
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+function paintGraph(){
+  if (!gctx) return;
+  const c = gctx;
+  c.clearRect(0, 0, gView.w, gView.h);
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+
+  for (const e of gEdges){
+    const a = gNodes[e.u], b = gNodes[e.v];
+    if (!a || !b) continue;
+    const s = e.cur;
+    c.beginPath();
+    c.strokeStyle = `rgba(${Math.round(s.r)},${Math.round(s.g)},${Math.round(s.b)},${s.a})`;
+    c.lineWidth = s.w;
+    c.moveTo(a.x, a.y);
+    c.lineTo(b.x, b.y);
+    c.stroke();
+  }
+
+  c.font = '600 11px Inter, Segoe UI, system-ui, Arial, sans-serif';
+  c.textAlign = 'center';
+  c.textBaseline = 'middle';
+  const CHIP = {
+    active: { fill: 'rgba(255,208,138,0.18)', line: 'rgba(255,208,138,0.65)', text: '#ffd08a' },
+    tree:   { fill: 'rgba(110,231,183,0.16)', line: 'rgba(110,231,183,0.6)',  text: '#6ee7b7' },
+    hover:  { fill: 'rgba(125,211,252,0.18)', line: 'rgba(125,211,252,0.7)',  text: '#7dd3fc' },
+    idle:   { fill: 'rgba(10,15,29,0.9)',     line: 'rgba(255,255,255,0.09)', text: '#929dbb' }
+  };
+  gEdges.forEach((e, i) => {
+    const m = edgeMid(e);
+    if (!m) return;
+    const tone = CHIP[e.state === 'idle' && i === gHoverEdge ? 'hover' : e.state] || CHIP.idle;
+    const text = String(e.w);
+    const w = Math.max(22, c.measureText(text).width + 14);
+    roundRect(c, m.x - w / 2, m.y - 10, w, 20, 7);
+    c.fillStyle = tone.fill;
+    c.fill();
+    c.strokeStyle = tone.line;
+    c.lineWidth = 1;
+    c.stroke();
+    c.fillStyle = tone.text;
+    c.fillText(text, m.x, m.y + 0.5);
+  });
+
+  const R = gNodeR();
+  c.font = `700 ${R > 17 ? 14 : 12}px Inter, Segoe UI, system-ui, Arial, sans-serif`;
   for (const n of gNodes){
-    ctx.beginPath(); ctx.fillStyle='#0f1724'; ctx.strokeStyle='rgba(255,255,255,0.06)'; ctx.lineWidth=2;
-    ctx.arc(n.x,n.y,18,0,Math.PI*2); ctx.fill(); ctx.stroke(); ctx.fillStyle='white'; ctx.font='12px Arial'; ctx.fillText(n.id, n.x-4, n.y+5);
+    const g = n.glow;
+    if (g > 0.01){
+      c.beginPath();
+      c.arc(n.x, n.y, R + 6 + g * 4, 0, Math.PI * 2);
+      c.fillStyle = `rgba(110,231,183,${0.16 * g})`;
+      c.fill();
+    }
+    c.beginPath();
+    c.arc(n.x, n.y, R, 0, Math.PI * 2);
+    if (g > 0.01){
+      const grad = c.createLinearGradient(n.x - R, n.y - R, n.x + R, n.y + R);
+      grad.addColorStop(0, `rgba(110,231,183,${0.25 + 0.75 * g})`);
+      grad.addColorStop(1, `rgba(125,211,252,${0.25 + 0.75 * g})`);
+      c.fillStyle = grad;
+    } else {
+      c.fillStyle = '#0d1322';
+    }
+    c.fill();
+    c.strokeStyle = g > 0.01 ? `rgba(255,255,255,${0.15 + 0.25 * g})` : 'rgba(255,255,255,0.16)';
+    c.lineWidth = 2;
+    c.stroke();
+    c.fillStyle = g > 0.5 ? '#05192b' : '#e8eefc';
+    c.fillText(String(n.label), n.x, n.y + 0.5);
+  }
+}
+
+/* ---------------------------- interaction ---------------------------- */
+
+function gPointer(evt){
+  const r = graphCanvas.getBoundingClientRect();
+  return { x: evt.clientX - r.left, y: evt.clientY - r.top };
+}
+
+function nodeAt(p){
+  const R = gNodeR() + 3;
+  for (let i = gNodes.length - 1; i >= 0; i--){
+    const n = gNodes[i];
+    if (Math.hypot(p.x - n.x, p.y - n.y) <= R) return i;
+  }
+  return -1;
+}
+
+function edgeLabelAt(p){
+  for (let i = 0; i < gEdges.length; i++){
+    const m = edgeMid(gEdges[i]);
+    if (m && Math.abs(p.x - m.x) <= 18 && Math.abs(p.y - m.y) <= 12) return i;
+  }
+  return -1;
+}
+
+function closeCanvasEditor(){
+  if (!gEditor) return;
+  const el = gEditor;
+  gEditor = null;
+  el.remove();
+}
+
+function openCanvasEditor(x, y, value, onCommit){
+  if (!graphStage) return;
+  closeCanvasEditor();
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.className = 'canvas-editor';
+  input.value = value;
+  input.style.left = `${gClamp(x - 33, 4, gView.w - 70)}px`;
+  input.style.top = `${gClamp(y - 17, 4, gView.h - 38)}px`;
+  graphStage.appendChild(input);
+  gEditor = input;
+  input.focus();
+  input.select();
+
+  const finish = (commit) => {
+    if (gEditor !== input) return;
+    const raw = input.value;
+    closeCanvasEditor();
+    if (commit && raw !== '') onCommit(Number(raw));
+    requestGraphFrame();
+  };
+  input.addEventListener('keydown', (e) => {
+    e.stopPropagation();
+    if (e.key === 'Enter'){ e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape'){ e.preventDefault(); finish(false); }
+  });
+  input.addEventListener('blur', () => finish(true));
+}
+
+function editNodeValue(i){
+  const n = gNodes[i];
+  if (!n) return;
+  openCanvasEditor(n.x, n.y, n.label, (v) => {
+    n.label = v;
+    renderNodeChips();
+    syncGraphStats();
+  });
+}
+
+function editEdgeWeight(i){
+  const e = gEdges[i];
+  const m = edgeMid(e);
+  if (!e || !m) return;
+  openCanvasEditor(m.x, m.y, e.w, (v) => {
+    e.w = Math.max(1, Math.round(v));
+    syncGraphStats();
+  });
+}
+
+if (graphCanvas){
+  graphCanvas.addEventListener('pointermove', (evt) => {
+    const p = gPointer(evt);
+    if (gDragNode >= 0){
+      const R = gNodeR();
+      const n = gNodes[gDragNode];
+      n.x = n.tx = gClamp(p.x, R + 2, gView.w - R - 2);
+      n.y = n.ty = gClamp(p.y, R + 2, gView.h - R - 2);
+      requestGraphFrame();
+      return;
+    }
+    const hn = nodeAt(p);
+    const he = hn === -1 ? edgeLabelAt(p) : -1;
+    if (hn !== gHoverNode || he !== gHoverEdge){
+      gHoverNode = hn;
+      gHoverEdge = he;
+      graphCanvas.classList.toggle('over-node', hn !== -1 || he !== -1);
+      requestGraphFrame();
+    }
+  });
+
+  graphCanvas.addEventListener('pointerdown', (evt) => {
+    closeCanvasEditor();
+    const i = nodeAt(gPointer(evt));
+    if (i === -1) return;
+    gDragNode = i;
+    graphCanvas.classList.add('dragging');
+    graphCanvas.setPointerCapture(evt.pointerId);
+    requestGraphFrame();
+  });
+
+  const endDrag = (evt) => {
+    if (gDragNode === -1) return;
+    gDragNode = -1;
+    graphCanvas.classList.remove('dragging');
+    try { graphCanvas.releasePointerCapture(evt.pointerId); } catch (_) {}
+    requestGraphFrame();
+  };
+  graphCanvas.addEventListener('pointerup', endDrag);
+  graphCanvas.addEventListener('pointercancel', endDrag);
+
+  graphCanvas.addEventListener('pointerleave', () => {
+    if (gHoverNode === -1 && gHoverEdge === -1) return;
+    gHoverNode = gHoverEdge = -1;
+    graphCanvas.classList.remove('over-node');
+    requestGraphFrame();
+  });
+
+  graphCanvas.addEventListener('dblclick', (evt) => {
+    evt.preventDefault();
+    const p = gPointer(evt);
+    const i = nodeAt(p);
+    if (i !== -1){ editNodeValue(i); return; }
+    const e = edgeLabelAt(p);
+    if (e !== -1) editEdgeWeight(e);
+  });
+
+  if (typeof ResizeObserver === 'function'){
+    new ResizeObserver(() => {
+      if (sizeGraphCanvas()) layoutGraph(true);
+    }).observe(graphCanvas);
+  }
+}
+
+/* ---------------------------- node value chips ---------------------------- */
+
+function renderNodeChips(){
+  const wrap = $('nodeValues');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  gNodes.forEach((n, i) => {
+    const chip = document.createElement('label');
+    chip.className = 'node-chip';
+
+    const idx = document.createElement('span');
+    idx.className = 'idx';
+    idx.textContent = `#${i}`;
+
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.value = n.label;
+    input.setAttribute('aria-label', `Value inside node ${i}`);
+    input.addEventListener('input', () => {
+      if (input.value !== '') n.label = Number(input.value);
+      requestGraphFrame();
+    });
+    input.addEventListener('focus', () => { gFocusNode = i; requestGraphFrame(); });
+    input.addEventListener('blur', () => {
+      if (input.value === ''){ n.label = i; input.value = i; }
+      gFocusNode = -1;
+      requestGraphFrame();
+    });
+
+    chip.append(idx, input);
+    wrap.appendChild(chip);
+  });
+}
+
+function syncGraphStats(){
+  const nodeStat = $('graphNodeStat');
+  const edgeStat = $('graphEdgeStat');
+  const countLabel = $('nodeCountLabel');
+  const info = $('graphInfo');
+  if (nodeStat) nodeStat.textContent = String(gNodes.length);
+  if (edgeStat) edgeStat.textContent = String(gEdges.length);
+  if (countLabel) countLabel.textContent = String(gNodes.length);
+  if (info) info.textContent = `${gNodes.length} nodes and ${gEdges.length} edges ready.`;
+  const countInput = $('nodeCount');
+  if (countInput && Number(countInput.value) !== gNodes.length) countInput.value = gNodes.length;
+}
+
+/* ---------------------------- building the graph ---------------------------- */
+
+function currentDensity(){
+  return gClamp(Number($('edgeDensity')?.value) || 60, 1, 100);
+}
+
+function hasEdge(u, v){
+  return gEdges.some(e => (e.u === u && e.v === v) || (e.u === v && e.v === u));
+}
+
+function ensureConnected(){
+  const n = gNodes.length;
+  if (n < 2) return;
+  const uf = new UF(n);
+  gEdges.forEach(e => uf.union(e.u, e.v));
+  for (let i = 1; i < n; i++){
+    if (uf.find(i) !== uf.find(0)){
+      let j = Math.floor(Math.random() * i);
+      if (hasEdge(i, j)) j = (j + 1) % i;
+      gEdges.push(makeEdge(Math.min(i, j), Math.max(i, j)));
+      uf.union(i, j);
+    }
+  }
+}
+
+function generateGraph(){
+  gRunId++;                                    // stop anything still animating
+  const n = gClamp(Math.round(Number($('nodeCount')?.value) || 6), MIN_NODES, MAX_NODES);
+  const density = currentDensity();
+
+  gNodes = [];
+  gEdges = [];
+  gMST = [];
+  gActiveNodes.clear();
+  for (let i = 0; i < n; i++) gNodes.push(makeNode(i));
+
+  for (let i = 0; i < n; i++){
+    for (let j = i + 1; j < n; j++){
+      if (Math.random() * 100 < density) gEdges.push(makeEdge(i, j));
+    }
+  }
+  ensureConnected();
+
+  removeMSTTotal();
+  renderNodeChips();
+  syncGraphStats();
+  sizeGraphCanvas();
+  layoutGraph(false);
+  paintGraph();
+  requestGraphFrame();
+
+  const summary = `Generated ${n} nodes and ${gEdges.length} edges.`;
+  const result = $('graphResult');
+  if (result) result.innerText = summary;
+  gClearLog(`${summary}\nDrag a node to move it. Double-click a node to change its number.`);
+}
+
+function setNodeCount(next){
+  const n = gClamp(Math.round(next) || MIN_NODES, MIN_NODES, MAX_NODES);
+  const cur = gNodes.length;
+  if (n === cur){ syncGraphStats(); return; }
+  gRunId++;
+
+  if (n > cur){
+    const density = currentDensity();
+    for (let i = cur; i < n; i++){
+      gNodes.push(makeNode(i));
+      let linked = false;
+      for (let j = 0; j < i; j++){
+        if (Math.random() * 100 < density){ gEdges.push(makeEdge(j, i)); linked = true; }
+      }
+      if (!linked) gEdges.push(makeEdge(Math.floor(Math.random() * i), i));
+    }
+  } else {
+    gNodes.length = n;
+    gEdges = gEdges.filter(e => e.u < n && e.v < n);
+  }
+  ensureConnected();
+
+  gMST = [];
+  gActiveNodes.clear();
+  removeMSTTotal();
+  renderNodeChips();
+  syncGraphStats();
+  if (sizeGraphCanvas()) layoutGraph(true);
+  paintGraph();
+  requestGraphFrame();
+
+  const result = $('graphResult');
+  if (result) result.innerText = `Graph now has ${gNodes.length} nodes and ${gEdges.length} edges.`;
+  gClearLog(`Node count set to ${gNodes.length}. Edit any node value, then run an algorithm.`);
+}
+
+/* ---------------------------- highlight helpers ---------------------------- */
+
+function drawGraph(highlights = new Set(), edgeColors = {}){
+  gEdges.forEach((e, i) => {
+    if (highlights.has(i)){
+      const amber = typeof edgeColors[i] === 'string' && edgeColors[i].includes('182');
+      e.state = amber ? 'active' : 'tree';
+      e.tgt = { ...(amber ? G_EDGE_ACTIVE : G_EDGE_TREE) };
+    } else {
+      e.state = 'idle';
+      e.tgt = { ...G_EDGE_IDLE };
+    }
+  });
+  gActiveNodes = new Set();
+  highlights.forEach(i => {
+    const e = gEdges[i];
+    if (e){ gActiveNodes.add(e.u); gActiveNodes.add(e.v); }
+  });
+  requestGraphFrame();
+}
+
+function highlightTree(treeSet, activeIdx){
+  gEdges.forEach((e, i) => {
+    if (i === activeIdx){ e.state = 'active'; e.tgt = { ...G_EDGE_ACTIVE }; }
+    else if (treeSet.has(i)){ e.state = 'tree'; e.tgt = { ...G_EDGE_TREE }; }
+    else { e.state = 'idle'; e.tgt = { ...G_EDGE_IDLE }; }
+  });
+  gActiveNodes = new Set();
+  treeSet.forEach(i => { const e = gEdges[i]; if (e){ gActiveNodes.add(e.u); gActiveNodes.add(e.v); } });
+  if (activeIdx !== undefined && gEdges[activeIdx]){
+    gActiveNodes.add(gEdges[activeIdx].u);
+    gActiveNodes.add(gEdges[activeIdx].v);
+  }
+  requestGraphFrame();
+}
+
+function removeMSTTotal(){
+  const el = $('mstTotal');
+  if (el) el.remove();
+}
+
+function updateMSTTotal(weight){
+  let el = $('mstTotal');
+  if (!el){
+    el = document.createElement('div');
+    el.id = 'mstTotal';
+    el.className = 'mst-total';
+    const graphResult = $('graphResult');
+    if (!graphResult) return;
+    graphResult.parentNode.insertBefore(el, graphResult.nextSibling);
+  }
+  el.textContent = `Minimum spanning tree total weight: ${weight}`;
+}
+
+/* ---------------------------- run control ---------------------------- */
+
+function gWait(token, factor = 1){
+  return sleep(Math.max(30, gDelay * factor)).then(() => token === gRunId);
+}
+
+function graphHeader(title, description, complexity){
+  gClearLog();
+  gLog(title);
+  gLog(description);
+  gLog(`Time complexity: ${complexity}`);
+  gLog(`Nodes: ${gNodes.length}   Edges: ${gEdges.length}`);
+  gLog(`Node values: ${gNodes.map((n, i) => nl(i)).join(', ')}`);
+  gLog('');
+}
+
+class UF {
+  constructor(n){ this.p = new Array(n).fill(0).map((_, i) => i); this.r = new Array(n).fill(0); }
+  find(x){ return this.p[x] === x ? x : (this.p[x] = this.find(this.p[x])); }
+  union(a, b){
+    a = this.find(a); b = this.find(b);
+    if (a === b) return false;
+    if (this.r[a] < this.r[b]) this.p[a] = b;
+    else this.p[b] = a;
+    if (this.r[a] === this.r[b]) this.r[a]++;
+    return true;
   }
 }
 
 function runGraph(){
-  const algo = $('graphAlgo').value;
-  if (algo==='boruvka') runBoruvka();
-  else if (algo==='kruskal') runKruskal();
-  else if (algo==='prim') runPrim();
-  else if (algo==='dijkstra') runDijkstra();
-  else if (algo==='dial') runDial();
-  else runPrim();
+  if (!gNodes.length) generateGraph();
+  const algo = $('graphAlgo')?.value || 'prim';
+  const token = ++gRunId;
+  removeMSTTotal();
+  if (algo === 'boruvka') return runBoruvka(token);
+  if (algo === 'kruskal') return runKruskal(token);
+  if (algo === 'dijkstra') return runDijkstra(token);
+  if (algo === 'dial') return runDial(token);
+  return runPrim(token);
 }
 
-class UF{
-  constructor(n){ this.p=new Array(n).fill(0).map((_,i)=>i); this.r=new Array(n).fill(0); }
-  find(x){ return this.p[x]===x?x:(this.p[x]=this.find(this.p[x])); }
-  union(a,b){ a=this.find(a); b=this.find(b); if(a===b) return false; if(this.r[a]<this.r[b]) this.p[a]=b; else this.p[b]=a; if(this.r[a]===this.r[b]) this.r[a]++; return true; }
-}
+/* ---------------------------- Kruskal ---------------------------- */
 
-function runKruskal(){
-  const edges = gEdges.map((e,idx) => ({...e,idx})).sort((a,b) => a.w - b.w);
-  const uf = new UF(gNodes.length); 
-  const highlights = new Set(); 
-  let step = 0;
-  let totalWeight = 0;
+async function runKruskal(token = ++gRunId){
+  const edges = gEdges.map((e, idx) => ({ u: e.u, v: e.v, w: e.w, idx })).sort((a, b) => a.w - b.w);
+  const uf = new UF(gNodes.length);
+  const tree = new Set();
+  let total = 0;
 
-  gLog(`=== KRUSKAL'S ALGORITHM FOR MINIMUM SPANNING TREE ===`);
-  gLog(`Algorithm Description: Sort edges by weight, add smallest edge that doesn't form cycle`);
-  gLog(`Time Complexity: O(E log E) for sorting, O(E α(V)) for union-find operations`);
-  gLog(`Number of nodes: ${gNodes.length}, Number of edges: ${gEdges.length}`);
-  gLog(`Initial edge list (sorted by weight):`);
-  edges.forEach((e, i) => gLog(`   ${i+1}. Edge (${e.u}-${e.v}) weight=${e.w}`));
-  gLog(``);
+  graphHeader(
+    "Kruskal's algorithm for a minimum spanning tree",
+    'Sort every edge by weight, then keep the smallest edge that does not close a cycle.',
+    'O(E log E) for the sort, O(E a(V)) for the union-find work'
+  );
+  gLog('Sorted edge list:');
+  edges.forEach((e, i) => gLog(`   ${i + 1}. ${nl(e.u)} - ${nl(e.v)}, weight ${e.w}`));
+  gLog('');
 
-  $('graphResult').innerText = 'Running Kruskal...';
+  const result = $('graphResult');
+  if (result) result.innerText = 'Running Kruskal.';
 
-  function stepAnim(){
-    if (step >= edges.length){
-      gMST = Array.from(highlights).map(i => gEdges[i]);
-      const finalWeight = gMST.reduce((sum, e) => sum + e.w, 0);
-      const resultText = `Kruskal finished. MST Weight: ${finalWeight}`;
-      $('graphResult').innerText = resultText;
-
-      updateMSTTotal(finalWeight);
-      gLog(`=== ALGORITHM COMPLETED ===`);
-      gLog(`Minimum Spanning Tree found with total weight: ${finalWeight}`);
-      gLog(`MST contains ${gMST.length} edges:`);
-      gMST.forEach((e, i) => gLog(`   ${i+1}. Edge (${e.u}-${e.v}) weight=${e.w}`));
-      gLog(`Number of components in original graph: 1 (MST connects all nodes)`);
-      drawGraph(highlights); 
-      return;
-    }
-
-    const e = edges[step]; 
-    drawGraph(new Set([e.idx]), {[e.idx]: 'rgba(255,182,88,0.95)'}); 
-    gLog(`Step ${step + 1}: Considering edge (${e.u}-${e.v}) with weight ${e.w}`);
-    gLog(`   - Find operation: find(${e.u}) = ${uf.find(e.u)}, find(${e.v}) = ${uf.find(e.v)}`);
-    gLog(`   - Are nodes in same component? ${uf.find(e.u) === uf.find(e.v) ? 'YES' : 'NO'}`);
+  for (let step = 0; step < edges.length; step++){
+    const e = edges[step];
+    highlightTree(tree, e.idx);
+    gLog(`Step ${step + 1}: considering edge ${nl(e.u)} - ${nl(e.v)} with weight ${e.w}`);
+    gLog(`   Roots: find(${nl(e.u)}) = ${nl(uf.find(e.u))}, find(${nl(e.v)}) = ${nl(uf.find(e.v))}`);
+    const sameComponent = uf.find(e.u) === uf.find(e.v);
+    gLog(`   Already in the same component: ${sameComponent ? 'yes' : 'no'}`);
+    if (!(await gWait(token))) return;
 
     if (uf.union(e.u, e.v)){
-      gLog(`   - UNION OPERATION: Merging components containing nodes ${e.u} and ${e.v}`);
-      gLog(`   - Edge ADDED to Minimum Spanning Tree`);
-      highlights.add(e.idx);
-      totalWeight += e.w;
-      updateMSTTotal(totalWeight);
-      gLog(`   - Current MST weight: ${totalWeight}`);
-      gLog(`   - Current MST edges: ${Array.from(highlights).map(i => `(${gEdges[i].u}-${gEdges[i].v})`).join(', ')}`);
-    } else { 
-      gLog(`   - SKIPPED: Edge would create a cycle in the MST`);
-      gLog(`   - Components remain separate`);
+      tree.add(e.idx);
+      total += e.w;
+      updateMSTTotal(total);
+      gLog(`   Added. Running total ${total}`);
+      gLog(`   Tree so far: ${Array.from(tree).map(i => `${nl(gEdges[i].u)}-${nl(gEdges[i].v)}`).join(', ')}`);
+      highlightTree(tree);
+    } else {
+      gLog('   Skipped, the edge would close a cycle.');
     }
-
-    step++; 
-    setTimeout(stepAnim, 800);
+    if (!(await gWait(token, 0.4))) return;
   }
-  stepAnim();
+
+  gMST = Array.from(tree).map(i => gEdges[i]);
+  highlightTree(tree);
+  updateMSTTotal(total);
+  if (result) result.innerText = `Kruskal finished. Minimum spanning tree weight: ${total}`;
+  gLog('');
+  gLog('Completed.');
+  gLog(`Minimum spanning tree weight: ${total}`);
+  gLog(`Edges in the tree (${gMST.length}):`);
+  gMST.forEach((e, i) => gLog(`   ${i + 1}. ${nl(e.u)} - ${nl(e.v)}, weight ${e.w}`));
 }
 
-function runPrim(){
-  const n = gNodes.length; 
-  const adj = Array.from({length: n}, () => []);
-  gEdges.forEach((e,idx) => { 
-    adj[e.u].push({v: e.v, w: e.w, idx}); 
-    adj[e.v].push({v: e.u, w: e.w, idx}); 
+/* ---------------------------- Prim ---------------------------- */
+
+async function runPrim(token = ++gRunId){
+  const n = gNodes.length;
+  const adj = Array.from({ length: n }, () => []);
+  gEdges.forEach((e, idx) => {
+    adj[e.u].push({ v: e.v, w: e.w, idx });
+    adj[e.v].push({ v: e.u, w: e.w, idx });
   });
 
-  const visited = new Array(n).fill(false); 
-  visited[0] = true; 
-  const highlights = new Set();
-  let totalWeight = 0;
+  const visited = new Array(n).fill(false);
+  visited[0] = true;
+  const tree = new Set();
+  let total = 0;
 
-  gLog(`=== PRIM'S ALGORITHM FOR MINIMUM SPANNING TREE ===`);
-  gLog(`Algorithm Description: Grow MST from starting node, always add minimum edge connecting to tree`);
-  gLog(`Time Complexity: O(V²) with array, O(E log V) with priority queue`);
-  gLog(`Number of nodes: ${n}, Number of edges: ${gEdges.length}`);
-  gLog(`Starting from node 0`);
-  gLog(`Initial visited set: [0]`);
-  gLog(``);
+  graphHeader(
+    "Prim's algorithm for a minimum spanning tree",
+    'Grow one tree from a starting node, always taking the cheapest edge that leaves it.',
+    'O(V^2) with an array, O(E log V) with a priority queue'
+  );
+  gLog(`Starting from node ${nl(0)}`);
+  gLog('');
 
-  $('graphResult').innerText = 'Running Prim...';
+  const result = $('graphResult');
+  if (result) result.innerText = 'Running Prim.';
 
-  function pickMinEdge(){ 
-    let best = null; 
-    for (let u = 0; u < n; u++){ 
-      if(!visited[u]) continue; 
-      for (const nb of adj[u]){ 
-        if(!visited[nb.v] && (!best || nb.w < best.w)) {
-          best = {...nb, from: u}; 
-        }
-      } 
-    } 
-    return best; 
-  }
-
-  let stepCount = 0;
-  function step(){ 
-    const best = pickMinEdge(); 
-    if(!best){ 
-      drawGraph(highlights); 
-      const resultText = `Prim finished. MST Weight: ${totalWeight}`;
-      $('graphResult').innerText = resultText;
-      updateMSTTotal(totalWeight);
-      gLog(`=== ALGORITHM COMPLETED ===`);
-      gLog(`Minimum Spanning Tree found with total weight: ${totalWeight}`);
-      gLog(`All ${n} nodes are connected in the MST`);
-      gLog(`MST contains ${highlights.size} edges`);
-      return; 
+  function pickMinEdge(){
+    let best = null;
+    for (let u = 0; u < n; u++){
+      if (!visited[u]) continue;
+      for (const nb of adj[u]){
+        if (!visited[nb.v] && (!best || nb.w < best.w)) best = { ...nb, from: u };
+      }
     }
-
-    stepCount++;
-    gLog(`Step ${stepCount}: Selected minimum edge (${best.from}-${best.v}) with weight ${best.w}`);
-    gLog(`   - This edge connects visited node ${best.from} to unvisited node ${best.v}`);
-    gLog(`   - Adding node ${best.v} to visited set`);
-    visited[best.v] = true; 
-    highlights.add(best.idx);
-    totalWeight += best.w;
-    updateMSTTotal(totalWeight);
-    gLog(`   - Current MST weight: ${totalWeight}`);
-    gLog(`   - Visited nodes: [${visited.map((v, i) => v ? i : null).filter(x => x !== null).join(', ')}]`);
-    drawGraph(highlights); 
-    setTimeout(step, 800); 
+    return best;
   }
-  step();
+
+  let step = 0;
+  while (true){
+    const best = pickMinEdge();
+    if (!best) break;
+    step++;
+    highlightTree(tree, best.idx);
+    gLog(`Step ${step}: cheapest edge leaving the tree is ${nl(best.from)} - ${nl(best.v)}, weight ${best.w}`);
+    if (!(await gWait(token))) return;
+
+    visited[best.v] = true;
+    tree.add(best.idx);
+    total += best.w;
+    updateMSTTotal(total);
+    gLog(`   Node ${nl(best.v)} joins the tree. Running total ${total}`);
+    gLog(`   Tree nodes: ${visited.map((v, i) => (v ? nl(i) : null)).filter(x => x !== null).join(', ')}`);
+    highlightTree(tree);
+    if (!(await gWait(token, 0.4))) return;
+  }
+
+  gMST = Array.from(tree).map(i => gEdges[i]);
+  highlightTree(tree);
+  updateMSTTotal(total);
+  if (result) result.innerText = `Prim finished. Minimum spanning tree weight: ${total}`;
+  gLog('');
+  gLog('Completed.');
+  gLog(`Minimum spanning tree weight: ${total}`);
+  gLog(`Edges in the tree: ${tree.size}`);
 }
 
-function runBoruvka(){
+/* ---------------------------- Boruvka ---------------------------- */
+
+async function runBoruvka(token = ++gRunId){
   const n = gNodes.length;
   if (!n) return;
 
-  const edges = gEdges.map((e,idx) => ({...e,idx}));
   const uf = new UF(n);
-  let numComponents = n;
-  const highlights = new Set();
-  let totalWeight = 0;
-  let phaseCount = 0;
+  const tree = new Set();
+  let components = n;
+  let total = 0;
+  let phase = 0;
 
-  gLog(`=== BORUVKA'S ALGORITHM FOR MINIMUM SPANNING TREE ===`);
-  gLog(`Algorithm Description: Each component finds cheapest outgoing edge, merge components in phases`);
-  gLog(`Time Complexity: O(E log V) - Good for distributed computing`);
-  gLog(`Number of nodes: ${n}, Number of edges: ${gEdges.length}`);
-  gLog(`Initial state: ${n} components (each node is its own component)`);
-  gLog(``);
+  const adj = Array.from({ length: n }, () => []);
+  gEdges.forEach((e, idx) => {
+    adj[e.u].push({ to: e.v, w: e.w, idx });
+    adj[e.v].push({ to: e.u, w: e.w, idx });
+  });
 
-  const adj = Array.from({length:n}, () => []);
-  for (const e of edges){
-    adj[e.u].push({to: e.v, w: e.w, idx: e.idx});
-    adj[e.v].push({to: e.u, w: e.w, idx: e.idx});
-  }
+  graphHeader(
+    "Boruvka's algorithm for a minimum spanning tree",
+    'Every component picks its cheapest outgoing edge, then all of them merge at once.',
+    'O(E log V), and it parallelises well'
+  );
+  gLog(`Starting with ${n} components, one per node.`);
+  gLog('');
 
-  async function phase(){
-    phaseCount++;
-    gLog(`=== PHASE ${phaseCount} ===`);
-    gLog(`Components remaining: ${numComponents}`);
+  const result = $('graphResult');
+  if (result) result.innerText = 'Running Boruvka.';
 
-    if (numComponents === 1){
-      drawGraph(highlights);
-      const resultText = `Borůvka finished. MST Weight: ${totalWeight}`;
-      $('graphResult').innerText = resultText;
-      updateMSTTotal(totalWeight);
-      gLog(`=== ALGORITHM COMPLETED ===`);
-      gLog(`Single component remaining - MST is complete`);
-      gLog(`Total MST weight: ${totalWeight}`);
-      gLog(`Number of phases: ${phaseCount}`);
-      return;
-    }
+  while (components > 1){
+    phase++;
+    gLog(`Phase ${phase}: ${components} components remain`);
 
     const cheapest = new Map();
     for (let u = 0; u < n; u++){
       const cu = uf.find(u);
       for (const nb of adj[u]){
-        const cv = uf.find(nb.to);
-        if (cu === cv) continue;
+        if (cu === uf.find(nb.to)) continue;
         const cur = cheapest.get(cu);
-        if (!cur || nb.w < cur.w) cheapest.set(cu, {u, v: nb.to, w: nb.w, idx: nb.idx});
+        if (!cur || nb.w < cur.w) cheapest.set(cu, { u, v: nb.to, w: nb.w, idx: nb.idx });
       }
     }
 
     if (cheapest.size === 0){
-      drawGraph(highlights);
-      $('graphResult').innerText = 'Graph is disconnected — partial forest drawn.';
-      updateMSTTotal(totalWeight);
-      gLog(`=== ALGORITHM TERMINATED ===`);
-      gLog(`Graph is disconnected - found ${numComponents} connected components`);
-      gLog(`This is a minimum spanning forest, not a single tree`);
+      highlightTree(tree);
+      if (result) result.innerText = 'Graph is disconnected, a partial forest is drawn.';
+      updateMSTTotal(total);
+      gLog('');
+      gLog(`Stopped: the graph is disconnected with ${components} components.`);
+      gLog('The result is a minimum spanning forest rather than a single tree.');
       return;
     }
 
-    gLog(`Found ${cheapest.size} candidate edges (cheapest outgoing edge for each component)`);
-    for (const {idx, u, v, w} of cheapest.values()){
-      gLog(`   - Component chooses edge (${u}-${v}) weight=${w}`);
-      drawGraph(new Set([idx]), {[idx]: 'rgba(255,182,88,0.95)'});
-      await sleep(600);
+    gLog(`   ${cheapest.size} candidate edges chosen`);
+    for (const { idx, u, v, w } of cheapest.values()){
+      gLog(`   Component picks ${nl(u)} - ${nl(v)}, weight ${w}`);
+      highlightTree(tree, idx);
+      if (!(await gWait(token, 0.7))) return;
     }
 
     let merged = 0;
-    for (const {u, v, idx, w} of cheapest.values()){
+    for (const { u, v, idx, w } of cheapest.values()){
       if (uf.union(u, v)){
         merged++;
-        numComponents--;
-        highlights.add(idx);
-        totalWeight += w;
-        gLog(`   - MERGE: Components containing nodes ${u} and ${v} merged using edge (${u}-${v})`);
-        updateMSTTotal(totalWeight);
-        drawGraph(highlights);
-        await sleep(500);
+        components--;
+        tree.add(idx);
+        total += w;
+        updateMSTTotal(total);
+        gLog(`   Merged the components of ${nl(u)} and ${nl(v)} using weight ${w}`);
+        highlightTree(tree);
+        if (!(await gWait(token, 0.6))) return;
       }
     }
 
-    gLog(`Phase ${phaseCount} results: Merged ${merged} components`);
-    gLog(`Components remaining: ${numComponents}`);
-    gLog(`Current MST weight: ${totalWeight}`);
+    gLog(`   Phase ${phase} merged ${merged} components. Running total ${total}`);
+    gLog('');
 
     if (merged === 0){
-      drawGraph(highlights);
-      $('graphResult').innerText = 'Borůvka stopped (no merges possible).';
-      updateMSTTotal(totalWeight);
-      gLog(`=== ALGORITHM TERMINATED ===`);
-      gLog(`No merges possible in this phase - algorithm cannot proceed`);
+      highlightTree(tree);
+      if (result) result.innerText = 'Boruvka stopped, no merge was possible.';
+      updateMSTTotal(total);
+      gLog('Stopped: no merge was possible in this phase.');
       return;
     }
-
-    await sleep(500);
-    phase();
+    if (!(await gWait(token, 0.5))) return;
   }
 
-  phase();
+  gMST = Array.from(tree).map(i => gEdges[i]);
+  highlightTree(tree);
+  updateMSTTotal(total);
+  if (result) result.innerText = `Boruvka finished. Minimum spanning tree weight: ${total}`;
+  gLog('Completed.');
+  gLog(`One component remains, so the tree is complete after ${phase} phases.`);
+  gLog(`Minimum spanning tree weight: ${total}`);
 }
 
-function runDijkstra(){
-  const n=gNodes.length;
-  const adj=Array.from({length:n},()=>[]);
-  gEdges.forEach((e,idx)=>{ adj[e.u].push({v:e.v,w:e.w,idx}); adj[e.v].push({v:e.u,w:e.w,idx}); });
-  const dist=new Array(n).fill(Infinity); dist[0]=0;
-  const vis=new Array(n).fill(false);
+/* ---------------------------- Dijkstra ---------------------------- */
 
-  gLog(`=== DIJKSTRA'S SHORTEST PATH ALGORITHM ===`);
-  gLog(`Algorithm Description: Find shortest paths from source to all nodes using greedy approach`);
-  gLog(`Time Complexity: O(V²) with array, O(E + V log V) with priority queue`);
-  gLog(`Source node: 0, Number of nodes: ${n}`);
-  gLog(`Initial distances: [${dist.join(', ')}]`);
-  gLog(``);
+async function runDijkstra(token = ++gRunId){
+  const n = gNodes.length;
+  const adj = Array.from({ length: n }, () => []);
+  gEdges.forEach((e, idx) => {
+    adj[e.u].push({ v: e.v, w: e.w, idx });
+    adj[e.v].push({ v: e.u, w: e.w, idx });
+  });
 
-  $('graphResult').innerText='Dijkstra running...'; 
+  const dist = new Array(n).fill(Infinity);
+  dist[0] = 0;
+  const visited = new Array(n).fill(false);
+  const used = new Set();
 
-  function minNode(){ 
-    let id=-1,best=Infinity; 
-    for(let i=0;i<n;i++) {
-      if(!vis[i] && dist[i]<best){
-        best=dist[i]; id=i;
-      }
-    }
-    return id; 
-  }
+  graphHeader(
+    "Dijkstra's shortest path algorithm",
+    'Repeatedly settle the nearest unvisited node, then relax every edge that leaves it.',
+    'O(V^2) with an array, O(E + V log V) with a priority queue'
+  );
+  gLog(`Source node: ${nl(0)}`);
+  gLog('');
 
-  let steps = 0;
-  async function loop(){
-    const u=minNode(); 
-    if (u===-1){ 
-      $('graphResult').innerText='Done'; 
-      gLog(`=== ALGORITHM COMPLETED ===`);
-      gLog(`Final shortest path distances from node 0:`);
-      dist.forEach((d, i) => gLog(`   - Distance to node ${i}: ${d === Infinity ? '∞ (unreachable)' : d}`));
-      return; 
-    }
+  const result = $('graphResult');
+  if (result) result.innerText = 'Running Dijkstra.';
 
-    steps++;
-    vis[u]=true; 
-    gLog(`Step ${steps}: Select node ${u} with current distance ${dist[u]}`);
-    gLog(`   - Marking node ${u} as visited`);
+  const show = (d) => (d === Infinity ? 'unreachable' : d);
 
-    for (const nb of adj[u]){ 
-      if (vis[nb.v]) continue; 
-      const alt=dist[u]+nb.w; 
-      gLog(`   - Relaxing edge (${u}-${nb.v}) with weight ${nb.w}`);
-      gLog(`   - Alternative distance: ${dist[u]} + ${nb.w} = ${alt}`);
-      gLog(`   - Current distance to node ${nb.v}: ${dist[nb.v]}`);
+  let step = 0;
+  while (true){
+    let u = -1, best = Infinity;
+    for (let i = 0; i < n; i++) if (!visited[i] && dist[i] < best){ best = dist[i]; u = i; }
+    if (u === -1) break;
 
-      drawGraph(new Set([nb.idx]), {[nb.idx]:'rgba(110,231,183,0.95)'}); 
-      await sleep(600); 
+    step++;
+    visited[u] = true;
+    gLog(`Step ${step}: settle node ${nl(u)} at distance ${dist[u]}`);
 
-      if (alt<dist[nb.v]){
-        dist[nb.v]=alt; 
-        gLog(`   - UPDATE: New shortest distance to node ${nb.v} = ${alt}`);
+    for (const nb of adj[u]){
+      if (visited[nb.v]) continue;
+      const alt = dist[u] + nb.w;
+      highlightTree(used, nb.idx);
+      gLog(`   Relax ${nl(u)} - ${nl(nb.v)}: ${dist[u]} + ${nb.w} = ${alt}, current ${show(dist[nb.v])}`);
+      if (!(await gWait(token, 0.8))) return;
+
+      if (alt < dist[nb.v]){
+        dist[nb.v] = alt;
+        used.add(nb.idx);
+        gLog(`   Improved. Distance to ${nl(nb.v)} is now ${alt}`);
       } else {
-        gLog(`   - No improvement, keeping current distance`);
+        gLog('   No improvement, the current distance stands.');
       }
-    } 
-    await sleep(400); 
-    loop();
-  }
-  loop();
-}
-
-function runDial(){
-  const n=gNodes.length;
-  const maxW = Math.max(...gEdges.map(e=>e.w),1);
-  const adj=Array.from({length:n},()=>[]); 
-  gEdges.forEach((e,idx)=>{ adj[e.u].push({v:e.v,w:e.w,idx}); adj[e.v].push({v:e.u,w:e.w,idx}); });
-  const dist=new Array(n).fill(Infinity); dist[0]=0;
-  const B = Array.from({length:maxW*n+1}, ()=>[]); B[0].push(0);
-
-  gLog(`=== DIAL'S ALGORITHM (OPTIMIZED DIJKSTRA) ===`);
-  gLog(`Algorithm Description: Uses buckets to store nodes based on distance, optimized for small edge weights`);
-  gLog(`Time Complexity: O(E + V*W) where W is maximum edge weight`);
-  gLog(`Maximum edge weight: ${maxW}, Number of buckets: ${maxW*n+1}`);
-  gLog(`Source node: 0, Initial bucket[0] = [0]`);
-  gLog(``);
-
-  let idxB=0;
-  let steps = 0;
-
-  async function process(){
-    while(idxB<B.length && B[idxB].length===0) idxB++;
-    if (idxB>=B.length){ 
-      gLog(`=== ALGORITHM COMPLETED ===`);
-      gLog(`Final distances: [${dist.join(', ')}]`);
-      $('graphResult').innerText='Done'; 
-      return; 
+      highlightTree(used);
     }
+    if (!(await gWait(token, 0.5))) return;
+  }
 
-    steps++;
-    const u=B[idxB].shift(); 
-    gLog(`Step ${steps}: Process node ${u} from bucket[${idxB}] (distance = ${idxB})`);
+  highlightTree(used);
+  if (result) result.innerText = 'Dijkstra finished.';
+  gLog('');
+  gLog('Completed.');
+  gLog(`Shortest distance from node ${nl(0)}:`);
+  dist.forEach((d, i) => gLog(`   to ${nl(i)}: ${show(d)}`));
+}
 
-    for (const nb of adj[u]){ 
-      const alt=dist[u]+nb.w; 
-      if (alt<dist[nb.v]){ 
-        const old=dist[nb.v]; 
-        dist[nb.v]=alt; 
-        const bIdx=alt % B.length; 
-        B[bIdx].push(nb.v); 
-        gLog(`   - Relax edge (${u}-${nb.v}): ${dist[u]} + ${nb.w} = ${alt}`);
-        gLog(`   - Update dist[${nb.v}] from ${old} to ${alt}`);
-        gLog(`   - Move node ${nb.v} to bucket[${bIdx}]`);
-        drawGraph(new Set([nb.idx]), {[nb.idx]:'rgba(110,231,183,0.95)'}); 
-        await sleep(500); 
-      } 
+/* ---------------------------- Dial ---------------------------- */
+
+async function runDial(token = ++gRunId){
+  const n = gNodes.length;
+  const maxW = Math.max(...gEdges.map(e => e.w), 1);
+  const adj = Array.from({ length: n }, () => []);
+  gEdges.forEach((e, idx) => {
+    adj[e.u].push({ v: e.v, w: e.w, idx });
+    adj[e.v].push({ v: e.u, w: e.w, idx });
+  });
+
+  const dist = new Array(n).fill(Infinity);
+  dist[0] = 0;
+  const buckets = Array.from({ length: maxW * n + 1 }, () => []);
+  buckets[0].push(0);
+  const used = new Set();
+
+  graphHeader(
+    "Dial's algorithm, a bucketed Dijkstra",
+    'Nodes wait in buckets indexed by distance, so no priority queue is needed.',
+    'O(E + V * W) where W is the largest edge weight'
+  );
+  gLog(`Largest edge weight ${maxW}, so ${buckets.length} buckets. Source node ${nl(0)}.`);
+  gLog('');
+
+  const result = $('graphResult');
+  if (result) result.innerText = 'Running Dial.';
+
+  let b = 0, step = 0;
+  while (b < buckets.length){
+    while (b < buckets.length && buckets[b].length === 0) b++;
+    if (b >= buckets.length) break;
+
+    const u = buckets[b].shift();
+    step++;
+    gLog(`Step ${step}: take node ${nl(u)} from bucket ${b}`);
+
+    for (const nb of adj[u]){
+      const alt = dist[u] + nb.w;
+      if (alt < dist[nb.v]){
+        const old = dist[nb.v];
+        dist[nb.v] = alt;
+        const target = alt % buckets.length;
+        buckets[target].push(nb.v);
+        used.add(nb.idx);
+        highlightTree(used, nb.idx);
+        gLog(`   Relax ${nl(u)} - ${nl(nb.v)}: ${dist[u]} + ${nb.w} = ${alt}`);
+        gLog(`   Distance to ${nl(nb.v)} moves from ${old === Infinity ? 'unreachable' : old} to ${alt}, bucket ${target}`);
+        if (!(await gWait(token, 0.7))) return;
+        highlightTree(used);
+      }
     }
-    idxB++; 
-    await sleep(400); 
-    process();
+    if (!(await gWait(token, 0.5))) return;
   }
-  process();
+
+  highlightTree(used);
+  if (result) result.innerText = 'Dial finished.';
+  gLog('');
+  gLog('Completed.');
+  gLog(`Shortest distance from node ${nl(0)}:`);
+  dist.forEach((d, i) => gLog(`   to ${nl(i)}: ${d === Infinity ? 'unreachable' : d}`));
 }
 
-function updateMSTTotal(weight) {
-  let mstTotalEl = $('mstTotal');
-  if (!mstTotalEl) {
-    mstTotalEl = document.createElement('div');
-    mstTotalEl.id = 'mstTotal';
-    mstTotalEl.className = 'mst-total';
-    const graphResult = $('graphResult');
-    graphResult.parentNode.insertBefore(mstTotalEl, graphResult.nextSibling);
-  }
-  mstTotalEl.textContent = `MST Total Weight: ${weight}`;
+/* ---------------------------- graph controls ---------------------------- */
+
+$('nodePlusBtn')?.addEventListener('click', () => setNodeCount(gNodes.length + 1));
+$('nodeMinusBtn')?.addEventListener('click', () => setNodeCount(gNodes.length - 1));
+
+$('nodeCount')?.addEventListener('change', (e) => setNodeCount(Number(e.target.value)));
+
+$('edgeDensity')?.addEventListener('input', (e) => {
+  const label = $('edgeDensityLabel');
+  if (label) label.textContent = `${e.target.value}%`;
+});
+
+$('graphDelay')?.addEventListener('input', (e) => {
+  gDelay = Number(e.target.value) || 600;
+  const label = $('graphSpeedLabel');
+  if (label) label.textContent = `${gDelay} ms`;
+});
+
+if ($('graphDelay')) gDelay = Number($('graphDelay').value) || 600;
+
+function revealGraph(animate){
+  if (sizeGraphCanvas()) layoutGraph(animate);
+  paintGraph();
+  requestGraphFrame();
 }
+
+categorySel?.addEventListener('change', (e) => {
+  if (e.target.value !== 'graph') return;
+  revealGraph(false);
+  requestAnimationFrame(() => revealGraph(false));
+});
+
+window.addEventListener('resize', () => revealGraph(true));
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && $('graphVis')?.style.display !== 'none') revealGraph(false);
+});
+
+generateGraph();
 
 const primeGrid = $('primeGrid');
 const primeLog  = $('primeLog');
@@ -2598,8 +3588,7 @@ function resetPrimeSteps(){
 function pLog(s){
   if (!primeLog) return;
   __primeStepN += 1;
-  primeLog.textContent += (primeLog.textContent ? '\n' : '') + `Step ${__primeStepN}. ${s}`;
-  primeLog.scrollTop = primeLog.scrollHeight;
+  logLine(primeLog, `Step ${__primeStepN}. ${s}`);
 }
 
 const primeStartBtn = $('primeStartBtn');
@@ -3043,9 +4032,8 @@ async function runHeapSortVisual(arr){
     await heapify(end,0); 
   }
 
-  addSortStep(`Final step: Only one element remaining, array is sorted`);
-  addSortStep(`   - Single element: ${a[0]} at position 0`);
-  drawHeapTree([a[0]], new Set([0])); 
+  addSortStep(`Final step: heap is empty after the last extraction`);
+  clearTreeCanvas();
   await sleep(delay);
 
   addSortStep(`=== ALGORITHM COMPLETED ===`);
@@ -3773,6 +4761,8 @@ function countFreqFromText(text) {
 
 function initializeHuffman() {
   const runHufBtn = document.getElementById('runHufBtn');
+  /* the shared bind() helper already wired this button up */
+  if (runHufBtn && runHufBtn.dataset.bound === '1') return;
   if (runHufBtn) {
     runHufBtn.addEventListener('click', async () => {
       const input = document.getElementById('hufInput');
@@ -3806,9 +4796,8 @@ function initializeHuffman() {
         renderHuffman(resp, freqMap);
       } catch (err) {
         console.error('Huffman request failed:', err);
-        if (!err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
-          alert(`Huffman error: ${err.message}`);
-        }
+        const box = document.getElementById('hufVisBox');
+        if (box) box.textContent = `Huffman error: ${err.message}`;
       }
     });
   }
@@ -3816,6 +4805,8 @@ function initializeHuffman() {
 
 function initializeHuffman() {
   const runHufBtn = document.getElementById('runHufBtn');
+  /* the shared bind() helper already wired this button up */
+  if (runHufBtn && runHufBtn.dataset.bound === '1') return;
   if (runHufBtn) {
     runHufBtn.addEventListener('click', async () => {
       const input = document.getElementById('hufInput');
@@ -3844,9 +4835,8 @@ function initializeHuffman() {
         renderHuffman(resp, freqMap);
       } catch (err) {
         console.error('Huffman request failed:', err);
-        if (!err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
-          alert(`Huffman error: ${err.message}`);
-        }
+        const box = document.getElementById('hufVisBox');
+        if (box) box.textContent = `Huffman error: ${err.message}`;
       }
     });
   }
@@ -4084,7 +5074,7 @@ async function runCryptoAlgorithm(operation) {
   } catch (err) {
     console.error('Crypto algorithm failed:', err);
     resultBox.innerHTML = `<strong>Error:</strong> ${err.message}`;
-    stepsBox.textContent = 'Failed to process the request. Check console for details.';
+    stepsBox.textContent = 'This cipher runs on the Python backend. Start it with "python server.py" and open http://localhost:8000';
   }
 }
 
@@ -4111,3 +5101,17 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+/* Draw the starting array as soon as the document is ready so that the
+   sorting panel is never blank. Runs last, when every helper exists. */
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const field = $('sortArray');
+    if (!field || !barsArea) return;
+    const arr = field.value.split(',').map(s => Number(s.trim())).filter(n => Number.isFinite(n));
+    if (arr.length) buildBars(arr);
+    toggleBarsForAlgo(currentSortAlgo);
+  } catch (err) {
+    console.error('Could not draw the starting array:', err);
+  }
+});

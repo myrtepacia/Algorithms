@@ -773,7 +773,7 @@ def chinese_remainder():
         steps.append("=== VERIFICATION ===")
         for i, (a, m) in enumerate(pairs):
             verification = x % m
-            status = "✓" if verification == a % m else "✗"
+            status = "OK" if verification == a % m else "MISMATCH"
             steps.append(f"x mod {m} = {verification}, should be {a % m} {status}")
         
         steps.append("")
@@ -999,7 +999,7 @@ def chinese_remainder_internal(data):
         steps.append("=== VERIFICATION ===")
         for i, (a, m) in enumerate(pairs):
             verification = x % m
-            status = "✓" if verification == a % m else "✗"
+            status = "OK" if verification == a % m else "MISMATCH"
             steps.append(f"x mod {m} = {verification}, should be {a % m} {status}")
         
         steps.append("")
@@ -1295,18 +1295,18 @@ def handle_modulo_operation(num1_str, num2_str, base):
     # Calculate modulo with detailed steps
     steps.append("")
     steps.append("=== CALCULATION STEPS ===")
-    steps.append(f"① Operation: {dividend} mod {divisor}")
+    steps.append(f"Step 1: operation {dividend} mod {divisor}")
     
     quotient = dividend // divisor
-    steps.append(f"② Calculate quotient: floor({dividend} ÷ {divisor}) = {quotient}")
+    steps.append(f"Step 2: calculate the quotient floor({dividend} ÷ {divisor}) = {quotient}")
     
     product = quotient * divisor
-    steps.append(f"③ Multiply quotient by divisor: {quotient} × {divisor} = {product}")
+    steps.append(f"Step 3: multiply the quotient by the divisor {quotient} × {divisor} = {product}")
     
     result = dividend - product
-    steps.append(f"④ Subtract from dividend: {dividend} - {product} = {result}")
+    steps.append(f"Step 4: subtract from the dividend {dividend} - {product} = {result}")
     
-    steps.append(f"⑤ Remainder is the modulo result: {result}")
+    steps.append(f"Step 5: the remainder is the modulo result {result}")
     
     # Convert results to different bases
     steps.append("")
@@ -2218,10 +2218,10 @@ def diffie_hellman_crypto(text, key, operation, steps, details):
         steps.append("")
         
         if s_alice == s_bob:
-            steps.append(f"✓ SUCCESS: Both computed same shared secret = {s_alice}")
+            steps.append(f"SUCCESS: both sides computed the same shared secret = {s_alice}")
             result = f"Shared Secret: {s_alice}"
         else:
-            steps.append(f"✗ ERROR: Shared secrets don't match! {s_alice} ≠ {s_bob}")
+            steps.append(f"ERROR: the shared secrets do not match. {s_alice} ≠ {s_bob}")
             result = "Error: Shared secrets don't match"
         
         details.append(f"Shared secret: s = g^(ab) mod p = {g}^({a}×{b}) mod {p}")
