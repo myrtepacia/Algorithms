@@ -1,14 +1,3 @@
-/* =========================================================
-   Algorithm Visualizer - design system
-
-   Plain and flat on purpose: hairline borders instead of
-   shadows, near-square corners, no blur, no lift, no glow.
-   Colour rule: one tertiary hue (blue-violet) carries the
-   interface. Amber and a muted red are reserved for
-   algorithm state, so a colour on screen always means
-   something.
-   ========================================================= */
-
 :root {
   /* surfaces - neutral graphite */
   --bg: #16161c;
